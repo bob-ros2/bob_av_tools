@@ -74,7 +74,6 @@ class WebRenderer(Node):
         self.declare_parameter('width', 854)
         self.declare_parameter('height', 480)
         self.declare_parameter('fps', 30.0)
-        self.declare_parameter('sub_topic', '/bob/llm_stream')
 
         self.fifo_path = self.get_parameter('fifo_path').value
         self.pub_topic = self.get_parameter('pub_topic').value
@@ -95,7 +94,7 @@ class WebRenderer(Node):
 
         self.subscription = self.create_subscription(
             String,
-            self.get_parameter('sub_topic').value,
+            'llm_stream',
             self.listener_callback,
             20
         )

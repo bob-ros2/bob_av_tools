@@ -35,8 +35,11 @@ Renders an offscreen browser and sends frames to a video pipe or ROS topic.
 ```bash
 ros2 run bob_av_tools webvideo --ros-args \
   -p fifo_path:=/tmp/overlay_video \
-  -p pub_topic:=/bob/overlay_stream \
-  -p sub_topic:=/bob/llm_stream
+  -p pub_topic:=/bob/overlay_stream
+
+# Remapping example (changing the input topic)
+ros2 run bob_av_tools webvideo --ros-args \
+  --remap llm_stream:=/my/other/topic
 ```
 
 #### Parameters:
@@ -44,10 +47,14 @@ ros2 run bob_av_tools webvideo --ros-args \
 |-----------|---------|-------------|
 | `fifo_path` | `/tmp/overlay_video` | Path to the output FIFO pipe. |
 | `pub_topic` | `/bob/overlay_stream`| ROS Image topic for the rendered output. |
-| `sub_topic` | `/bob/llm_stream` | ROS String topic for incoming text/markdown. |
 | `width` | `854` | Render width. |
 | `height` | `480` | Render height. |
 | `fps` | `30.0` | Frames per second. |
+
+#### Fixed Topics (Remappable):
+| Topic Name | Type | Description |
+|------------|------|-------------|
+| `llm_stream` | `std_msgs/msg/String` | Input topic for text/markdown content. |
 
 ### FIFO Helper (`write_fifo.sh`)
 Pipes data into a FIFO, creating it if necessary.
