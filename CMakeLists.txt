@@ -38,11 +38,12 @@ install(
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  # Exclude C++ linters for a pure Python package
+  # Exclude non-Python linters for a pure Python package
   list(APPEND AMENT_LINT_AUTO_EXCLUDE
     ament_cmake_cppcheck
     ament_cmake_cpplint
     ament_cmake_uncrustify
+    ament_cmake_lint_cmake
   )
   ament_lint_auto_find_test_dependencies()
 endif()

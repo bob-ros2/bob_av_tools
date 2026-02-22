@@ -172,7 +172,11 @@ class WebviewNode(Node):
                 "{ console.log('BRIDGE_CALL:' + text); } };"
             )
             # 2. Inject Custom CSS if provided
-            if self.override_css_path and os.path.exists(self.override_css_path):
+            css_exists = (
+                self.override_css_path and
+                os.path.exists(self.override_css_path)
+            )
+            if css_exists:
                 try:
                     with open(self.override_css_path, 'r') as f:
                         css_content = f.read()
@@ -192,7 +196,10 @@ class WebviewNode(Node):
     def listener_callback(self, msg):
         # We now send data chunks. The JS side will handle the accumulation
         # into a persistent AI block.
-        js_code = f"if(window.appendStream) window.appendStream({repr(msg.data)});"
+        js_code = (
+            "if(window.appendStream) "
+            f"window.appendStream({repr(msg.data)});"
+        )
         self.page.runJavaScript(js_code)
 
     def run(self):

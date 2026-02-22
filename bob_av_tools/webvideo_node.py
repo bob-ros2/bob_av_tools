@@ -95,12 +95,18 @@ class WebRenderer(Node):
             int(os.environ.get('WEBVIDEO_QUEUE_LENGTH', 1000)),
             ParameterDescriptor(description='ROS subscription queue size')
         )
+        self.declare_parameter(
+            'override_css',
+            '',
+            ParameterDescriptor(description='Path to a custom .css file')
+        )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.fps = self.get_parameter('fps').value
         self.fifo_path = self.get_parameter('fifo_path').value
         self.queue_length = self.get_parameter('queue_length').value
+        self.override_css_path = self.get_parameter('override_css').value
 
         # ROS Publishers & Subscriptions
         # Fixed topic name 'web_image', can be remapped
@@ -159,10 +165,34 @@ class WebRenderer(Node):
         self.get_logger().info(f"Loading UI from: {html_path}")
         self.page.load(QUrl.fromLocalFile(str(html_path.absolute())))
 
+        # Connect injection once loaded
+        self.page.loadFinished.connect(self._on_load_finished)
+
         # Timer for frame capture
         self.timer = QTimer()
         self.timer.timeout.connect(self.capture_frame)
         self.timer.start(int(1000 / self.fps))
+
+    def _on_load_finished(self, success):
+        css_exists = (
+            self.override_css_path and
+            os.path.exists(self.override_css_path)
+        )
+        if success and css_exists:
+            try:
+                with open(self.override_css_path, 'r') as f:
+                    css_content = f.read()
+                js_inject = (
+                    "const style = document.createElement('style');"
+                    f"style.textContent = {repr(css_content)}; "
+                    "document.head.appendChild(style);"
+                )
+                self.page.runJavaScript(js_inject)
+                self.get_logger().info(
+                    f"Injected custom CSS from: {self.override_css_path}"
+                )
+            except Exception as e:
+                self.get_logger().error(f"Failed to load CSS: {e}")
 
     def listener_callback(self, msg):
         with self.lock:

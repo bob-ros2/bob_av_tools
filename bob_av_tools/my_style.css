@@ -1,9 +1,3 @@
-:root {
-    --cyan-accent: #00ff41;
-    /* Ein sattes Matrix-Grün */
-    --cyan-glow: rgba(0, 255, 65, 0.4);
-}
-
 #content-area {
     font-size: 0.8rem;
     /* Small Text */
