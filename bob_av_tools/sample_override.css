@@ -1,0 +1,26 @@
+/* 
+   BOB NEXUS | SAMPLE UI OVERRIDE
+   Use this file with: ros2 run bob_av_tools webview -p override_css:=/pfad/zu/dieser/datei.css
+*/
+
+:root {
+    /* Change the primary cyan accent to a deep Matrix green */
+    --cyan-accent: #00ff41;
+    --cyan-glow: rgba(0, 255, 65, 0.4);
+    
+    /* Make the background even darker */
+    --bg-dark: #050505;
+}
+
+#content-area {
+    /* Increase global font size for better readability */
+    font-size: 1.3rem;
+}
+
+.uplink-echo {
+    /* Custom styling for your own messages */
+    background: rgba(0, 255, 65, 0.05);
+    border-color: rgba(0, 255, 65, 0.2);
+    border-left-color: var(--cyan-accent);
+    color: var(--cyan-accent);
+}
