@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOB NEXUS | INTERACTIVE TERMINAL</title>
+    <!-- Using local libraries for offline high-fidelity rendering -->
+    <script src="vendor/marked.min.js"></script>
+    <style>
+        /* MASTERMIND NEXUS THEME: INTERACTIVE VERSION */
+        :root {
+            --cyan-accent: #008b8b;
+            --cyan-glow: rgba(0, 139, 139, 0.4);
+            --bg-dark: #0a0a0a;
+            --text-gray: #dcdcdc;
+            --text-dim: #bbb;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-gray);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 0;
+            line-height: 1.4;
+            background-image: radial-gradient(rgba(18, 18, 18, 0.75), rgba(0, 0, 0, 0.9));
+            user-select: text;
+            /* Enable text selection */
+        }
+
+        /* SCANLINES EFFECT (Fixed position so it stays while scrolling) */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 9999;
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+        }
+
+        #root-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            width: 100vw;
+            box-sizing: border-box;
+            padding: 30px;
+        }
+
+        #content-area {
+            flex: 1;
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 2px solid var(--cyan-accent);
+            min-height: calc(100vh - 60px);
+        }
+
+        /* CUSTOM SCROLLBAR FOR HACKER LOOK */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #222;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--cyan-accent);
+        }
+
+        /* MARKDOWN STYLING */
+        #content-area h1,
+        #content-area h2,
+        #content-area h3 {
+            color: var(--cyan-accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 5px var(--cyan-accent);
+        }
+
+        #content-area p {
+            margin-bottom: 1.2rem;
+        }
+
+        #content-area ul,
+        #content-area ol {
+            margin: 1.2rem 0;
+            padding-left: 2rem;
+        }
+
+        #content-area li {
+            margin-bottom: 0.6rem;
+        }
+
+        #content-area blockquote {
+            border-left: 4px solid #444;
+            margin: 1.5rem 0;
+            padding: 10px 20px;
+            color: #888;
+            font-style: italic;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        #content-area code {
+            background: #1a1a1a;
+            color: #ff8c00;
+            padding: 2px 6px;
+            font-size: 1rem;
+            border-radius: 3px;
+        }
+
+        #content-area table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        #content-area th {
+            border-bottom: 2px solid var(--cyan-accent);
+            color: var(--cyan-accent);
+            text-align: left;
+            padding: 12px;
+        }
+
+        #content-area td {
+            border-bottom: 1px solid #222;
+            padding: 10px;
+        }
+
+        /* CURSOR */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2rem;
+            background-color: var(--cyan-accent);
+            margin-left: 8px;
+            vertical-align: middle;
+            animation: blinker 0.8s step-end infinite;
+        }
+
+        @keyframes blinker {
+            50% {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root-container">
+        <div id="content-area">
+            <!-- Content will be injected here via ROS -->
+        </div>
+    </div>
+
+    <script>
+        const contentArea = document.getElementById('content-area');
+        let autoScroll = true;
+
+        // Detect manual scroll to disable autoscroll temporarily if needed
+        window.addEventListener('scroll', () => {
+            const atBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 50;
+            autoScroll = atBottom;
+        });
+
+        window.updateContent = (newContent) => {
+            try {
+                if (window.marked) {
+                    contentArea.innerHTML = marked.parse(newContent) + '<span class="cursor"></span>';
+
+                    if (autoScroll) {
+                        window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+                    }
+                }
+            } catch (e) {
+                console.error("Render Error:", e);
+            }
+        };
+    </script>
+</body>
+
+</html>

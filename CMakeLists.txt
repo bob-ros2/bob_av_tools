@@ -20,6 +20,7 @@ ament_python_install_package(${PROJECT_NAME}
 # This allows the node to find them regardless of install location
 install(FILES
   bob_av_tools/overlay.html
+  bob_av_tools/index.html
   DESTINATION share/${PROJECT_NAME}
 )
 
