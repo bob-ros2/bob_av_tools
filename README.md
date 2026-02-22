@@ -32,6 +32,7 @@ sudo apt install libxcb-cursor0 libgbm1 libnss3 libasound2
 ### Web Video Renderer (`webvideo`)
 Renders an offscreen browser and sends frames to a video pipe or ROS topic.
 
+```bash
 ros2 run bob_av_tools webvideo
 
 # Remapping examples (changing topics)
