@@ -3,7 +3,7 @@
 <package format="3">
   <name>bob_av_tools</name>
   <version>0.0.0</version>
-  <description>Bob's Audio/Video Tools</description>
+  <description>A collection of audio-visual utilities for the Bob ROS 2 ecosystem.</description>
   <maintainer email="bobmeuchelm@gmail.com">Bob Ros</maintainer>
   <license>Apache-2.0</license>
 
