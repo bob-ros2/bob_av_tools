@@ -69,28 +69,24 @@ class WebRenderer(Node):
         )
 
         # Parameters
-        self.declare_parameter('fifo_path', '/tmp/overlay_video')
-        self.declare_parameter('pub_topic', '/bob/overlay_stream')
         self.declare_parameter('width', 854)
         self.declare_parameter('height', 480)
         self.declare_parameter('fps', 30.0)
 
-        self.fifo_path = self.get_parameter('fifo_path').value
-        self.pub_topic = self.get_parameter('pub_topic').value
+        self.fifo_path = '/tmp/web_fifo'
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.fps = self.get_parameter('fps').value
 
         # ROS Publishers & Subscriptions
+        # Fixed topic name 'web_image', can be remapped
         self.image_pub = None
-        if self.pub_topic and HAS_CV_BRIDGE:
-            self.image_pub = self.create_publisher(Image, self.pub_topic, 10)
+        if HAS_CV_BRIDGE:
+            self.image_pub = self.create_publisher(Image, 'web_image', 10)
             self.bridge = CvBridge()
-            self.get_logger().info(f"Publishing frames to: {self.pub_topic}")
-        elif self.pub_topic and not HAS_CV_BRIDGE:
-            self.get_logger().warn(
-                "CvBridge not found. Disabling Image publisher."
-            )
+            self.get_logger().info("Publishing frames to: web_image")
+        else:
+            self.get_logger().warn("CvBridge not found. No Image publisher.")
 
         self.subscription = self.create_subscription(
             String,

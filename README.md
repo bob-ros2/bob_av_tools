@@ -32,21 +32,17 @@ sudo apt install libxcb-cursor0 libgbm1 libnss3 libasound2
 ### Web Video Renderer (`webvideo`)
 Renders an offscreen browser and sends frames to a video pipe or ROS topic.
 
-```bash
-ros2 run bob_av_tools webvideo --ros-args \
-  -p fifo_path:=/tmp/overlay_video \
-  -p pub_topic:=/bob/overlay_stream
+ros2 run bob_av_tools webvideo
 
-# Remapping example (changing the input topic)
+# Remapping examples (changing topics)
 ros2 run bob_av_tools webvideo --ros-args \
-  --remap llm_stream:=/my/other/topic
+  --remap llm_stream:=/my/input/topic \
+  --remap web_image:=/my/output/overlay
 ```
 
-#### Parameters:
+#### Parameters (Configuration):
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `fifo_path` | `/tmp/overlay_video` | Path to the output FIFO pipe. |
-| `pub_topic` | `/bob/overlay_stream`| ROS Image topic for the rendered output. |
 | `width` | `854` | Render width. |
 | `height` | `480` | Render height. |
 | `fps` | `30.0` | Frames per second. |
@@ -55,6 +51,11 @@ ros2 run bob_av_tools webvideo --ros-args \
 | Topic Name | Type | Description |
 |------------|------|-------------|
 | `llm_stream` | `std_msgs/msg/String` | Input topic for text/markdown content. |
+| `web_image`  | `sensor_msgs/msg/Image` | Output topic for the rendered frames. |
+
+#### Fixed Assets / Paths:
+- **FIFO**: `/tmp/web_fifo` (BGRA raw video)
+- **Overlay**: `share/bob_av_tools/overlay.html`
 
 ### FIFO Helper (`write_fifo.sh`)
 Pipes data into a FIFO, creating it if necessary.
