@@ -25,6 +25,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
+from rcl_interfaces.msg import ParameterDescriptor
 from ament_index_python.packages import (
     get_package_share_directory,
     PackageNotFoundError
@@ -68,26 +69,31 @@ class WebRenderer(Node):
             f"Web Video Node starting on ROS_DOMAIN_ID: {domain_id}"
         )
 
-        # Parameters with Env-Var defaults
+        # Parameters with Env-Var defaults and Descriptors
         self.declare_parameter(
             'width',
-            int(os.environ.get('WEBVIDEO_WIDTH', 854))
+            int(os.environ.get('WEBVIDEO_WIDTH', 854)),
+            ParameterDescriptor(description='Rendering width in pixels')
         )
         self.declare_parameter(
             'height',
-            int(os.environ.get('WEBVIDEO_HEIGHT', 480))
+            int(os.environ.get('WEBVIDEO_HEIGHT', 480)),
+            ParameterDescriptor(description='Rendering height in pixels')
         )
         self.declare_parameter(
             'fps',
-            float(os.environ.get('WEBVIDEO_FPS', 30.0))
+            float(os.environ.get('WEBVIDEO_FPS', 30.0)),
+            ParameterDescriptor(description='Frames per second for capture')
         )
         self.declare_parameter(
             'fifo_path',
-            os.environ.get('WEBVIDEO_FIFO_PATH', '/tmp/web_fifo')
+            os.environ.get('WEBVIDEO_FIFO_PATH', '/tmp/web_fifo'),
+            ParameterDescriptor(description='File path for the raw video FIFO')
         )
         self.declare_parameter(
             'queue_length',
-            int(os.environ.get('WEBVIDEO_QUEUE_LENGTH', 1000))
+            int(os.environ.get('WEBVIDEO_QUEUE_LENGTH', 1000)),
+            ParameterDescriptor(description='ROS subscription queue size')
         )
 
         self.width = self.get_parameter('width').value
