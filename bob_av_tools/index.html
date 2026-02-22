@@ -27,9 +27,10 @@
             background-image: radial-gradient(rgba(18, 18, 18, 0.75), rgba(0, 0, 0, 0.9));
             user-select: text;
             /* Enable text selection */
+            overflow-x: hidden;
         }
 
-        /* SCANLINES EFFECT (Fixed position so it stays while scrolling) */
+        /* SCANLINES EFFECT (Fixed position) */
         body::before {
             content: " ";
             display: block;
@@ -48,12 +49,13 @@
         #root-container {
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            height: 100vh;
             width: 100vw;
             box-sizing: border-box;
-            padding: 30px;
+            padding: 20px;
         }
 
+        /* TERMINAL CONTENT AREA */
         #content-area {
             flex: 1;
             font-size: 1.1rem;
@@ -61,25 +63,89 @@
             padding: 20px;
             background: rgba(0, 0, 0, 0.3);
             border-left: 2px solid var(--cyan-accent);
-            min-height: calc(100vh - 60px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #222 transparent;
         }
 
-        /* CUSTOM SCROLLBAR FOR HACKER LOOK */
+        /* CUSTOM SCROLLBAR */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
 
         ::-webkit-scrollbar-track {
-            background: #050505;
+            background: transparent;
         }
 
         ::-webkit-scrollbar-thumb {
             background: #222;
-            border-radius: 4px;
+            border-radius: 3px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
             background: var(--cyan-accent);
+        }
+
+        /* CHAT INPUT AREA */
+        #chat-container {
+            display: none;
+            /* Hidden by default, toggled via query param */
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid #222;
+            border-left: 2px solid var(--cyan-accent);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        #chat-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--cyan-accent);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            padding: 10px;
+            outline: none;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        #chat-input::placeholder {
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #send-btn {
+            background: transparent;
+            border: 1px solid #333;
+            color: var(--cyan-accent);
+            cursor: pointer;
+            padding: 8px 15px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #send-btn:hover {
+            border-color: var(--cyan-accent);
+            background: rgba(0, 139, 139, 0.1);
+            box-shadow: 0 0 10px var(--cyan-glow);
+        }
+
+        #send-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
         }
 
         /* MARKDOWN STYLING */
@@ -98,16 +164,6 @@
             margin-bottom: 1.2rem;
         }
 
-        #content-area ul,
-        #content-area ol {
-            margin: 1.2rem 0;
-            padding-left: 2rem;
-        }
-
-        #content-area li {
-            margin-bottom: 0.6rem;
-        }
-
         #content-area blockquote {
             border-left: 4px solid #444;
             margin: 1.5rem 0;
@@ -122,26 +178,6 @@
             color: #ff8c00;
             padding: 2px 6px;
             font-size: 1rem;
-            border-radius: 3px;
-        }
-
-        #content-area table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1.5rem 0;
-            background: rgba(255, 255, 255, 0.01);
-        }
-
-        #content-area th {
-            border-bottom: 2px solid var(--cyan-accent);
-            color: var(--cyan-accent);
-            text-align: left;
-            padding: 12px;
-        }
-
-        #content-area td {
-            border-bottom: 1px solid #222;
-            padding: 10px;
         }
 
         /* CURSOR */
@@ -168,15 +204,60 @@
         <div id="content-area">
             <!-- Content will be injected here via ROS -->
         </div>
+
+        <div id="chat-container">
+            <textarea id="chat-input" rows="1" placeholder="UPLINK COMMAND..."></textarea>
+            <button id="send-btn">
+                <span>SEND</span>
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+            </button>
+        </div>
     </div>
 
     <script>
         const contentArea = document.getElementById('content-area');
+        const chatContainer = document.getElementById('chat-container');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+
         let autoScroll = true;
 
-        // Detect manual scroll to disable autoscroll temporarily if needed
-        window.addEventListener('scroll', () => {
-            const atBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 50;
+        // Check query params for chat state
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('chat') === 'true') {
+            chatContainer.style.display = 'flex';
+        }
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = chatInput.scrollHeight + 'px';
+        });
+
+        // Chat Logic
+        const submitChat = () => {
+            const text = chatInput.value.trim();
+            if (text) {
+                console.log('BRIDGE_CALL:' + text);
+                chatInput.value = '';
+                chatInput.style.height = 'auto';
+            }
+        };
+
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitChat();
+            }
+        });
+
+        sendBtn.addEventListener('click', submitChat);
+
+        // Scroll Detection
+        contentArea.addEventListener('scroll', () => {
+            const atBottom = contentArea.scrollHeight - contentArea.scrollTop <= contentArea.clientHeight + 50;
             autoScroll = atBottom;
         });
 
@@ -184,9 +265,8 @@
             try {
                 if (window.marked) {
                     contentArea.innerHTML = marked.parse(newContent) + '<span class="cursor"></span>';
-
                     if (autoScroll) {
-                        window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+                        contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
                     }
                 }
             } catch (e) {

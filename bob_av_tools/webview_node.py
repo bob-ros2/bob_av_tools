@@ -33,10 +33,23 @@ try:
     from PySide6.QtWidgets import QApplication, QMainWindow
     from PySide6.QtWebEngineCore import QWebEnginePage
     from PySide6.QtWebEngineWidgets import QWebEngineView
-    from PySide6.QtCore import QUrl, QTimer
+    from PySide6.QtCore import QUrl, QTimer, Slot, QObject
 except ImportError as e:
     print(f"Error: {e}. Please install PySide6 with: pip install PySide6")
     sys.exit(1)
+
+
+class Bridge(QObject):
+    def __init__(self, node):
+        super().__init__()
+        self.node = node
+
+    @Slot(str)
+    def sendMessage(self, text):
+        msg = String()
+        msg.data = text
+        self.node.chat_pub.publish(msg)
+        self.node.get_logger().info(f"Published chat message: '{text[:20]}...'")
 
 
 class CustomPage(QWebEnginePage):
@@ -68,10 +81,16 @@ class WebviewNode(Node):
             int(os.environ.get('WEBVIEW_QUEUE_LENGTH', 1000)),
             ParameterDescriptor(description='ROS subscription queue size')
         )
+        self.declare_parameter(
+            'enable_chat',
+            False,
+            ParameterDescriptor(description='Enable interactive chat input area')
+        )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.queue_length = self.get_parameter('queue_length').value
+        self.enable_chat = self.get_parameter('enable_chat').value
 
         # Shared state
         self.current_content = ""
@@ -93,6 +112,15 @@ class WebviewNode(Node):
         self.page = CustomPage(self)
         self.view.setPage(self.page)
 
+        # Setup Bridge for JS -> Python communication
+        self.bridge = Bridge(self)
+        self.page.setWebChannel(None)  # Reset
+        # We'll use a simpler runJavaScript approach if possible,
+        # but for clean Slot usage we'll stick to exposing an object
+        # Note: QtWebChannel is usually safer, but for a single slot,
+        # we can also use a custom object injection or just a direct JS prompt.
+        # Let's use the standard "expose object" pattern.
+
         # Load local HTML
         try:
             package_share_dir = get_package_share_directory('bob_av_tools')
@@ -102,10 +130,7 @@ class WebviewNode(Node):
             if not html_path.exists():
                 html_path = Path(os.getcwd()) / "bob_av_tools" / "index.html"
 
-        self.get_logger().info(f"Loading UI from: {html_path}")
-        self.page.load(QUrl.fromLocalFile(str(html_path.absolute())))
-
-        # ROS Subscriptions
+        # Subscription
         self.subscription = self.create_subscription(
             String,
             'llm_stream',
@@ -113,12 +138,30 @@ class WebviewNode(Node):
             self.queue_length
         )
 
+        # Publisher for Chat
+        self.chat_pub = self.create_publisher(String, 'chat_out', 10)
+
+        # Load file with query param for chat state
+        url = QUrl.fromLocalFile(str(html_path.absolute()))
+        if self.enable_chat:
+            url.setQuery("chat=true")
+
+        self.get_logger().info(f"Loading UI from: {html_path} (Chat: {self.enable_chat})")
+        self.page.load(url)
+
+        # Connect bridge to window object once loaded
+        self.page.loadFinished.connect(self._setup_js_bridge)
+
         self.main_window.show()
+
+    def _setup_js_bridge(self, success):
+        if success:
+            # Simple injection to handle Python calls from JS
+            self.page.runJavaScript("window.pythonBridge = { sendMessage: (text) => { console.log('BRIDGE_CALL:' + text); } };")
 
     def listener_callback(self, msg):
         with self.lock:
             self.current_content += msg.data
-            # We don't need complex repair here as index.html uses marked.js directly
             js_code = (
                 "if(window.updateContent) "
                 "window.updateContent("
@@ -133,7 +176,25 @@ class WebviewNode(Node):
         timer = QTimer()
         timer.timeout.connect(self._ros_spin_once)
         timer.start(10)  # 100Hz
+
+        # Poll Console for Bridge Calls (Simpler than full WebChannel for one string)
+        bridge_timer = QTimer()
+        bridge_timer.timeout.connect(self._check_bridge_calls)
+        bridge_timer.start(50)
+
         return self.qt_app.exec()
+
+    def _check_bridge_calls(self):
+        # We'll rely on a manual bridge mechanism since QWebChannel needs more dependencies
+        pass
+
+    # Alternative: Use simple console.log parsing for the bridge
+    def javaScriptConsoleMessage(self, level, message, line_id, source_id):
+        if message.startswith("BRIDGE_CALL:"):
+            text = message[len("BRIDGE_CALL:"):]
+            self.bridge.sendMessage(text)
+        else:
+            self.get_logger().info(f"[JS] {message}")
 
     def _ros_spin_once(self):
         if rclpy.ok():
@@ -144,10 +205,10 @@ class WebviewNode(Node):
 
 
 def main(args=None):
-    # For interactive webview, we want standard windowing, not offscreen
     rclpy.init(args=args)
-
     renderer = WebviewNode()
+    # Apply the console log handler fix
+    renderer.page.javaScriptConsoleMessage = renderer.javaScriptConsoleMessage
     exit_code = renderer.run()
 
     if rclpy.ok():
