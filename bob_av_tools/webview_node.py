@@ -60,7 +60,11 @@ class CustomPage(QWebEnginePage):
         self.node = node
 
     def javaScriptConsoleMessage(self, level, message, line_id, source_id):
-        self.node.get_logger().info(f"[JS] {message} (line {line_id})")
+        if message.startswith("BRIDGE_CALL:"):
+            text = message[len("BRIDGE_CALL:"):]
+            self.node.bridge.sendMessage(text)
+        else:
+            self.node.get_logger().info(f"[JS] {message} (line {line_id})")
 
 
 class WebviewNode(Node):
@@ -86,18 +90,21 @@ class WebviewNode(Node):
         self.declare_parameter(
             'enable_chat',
             False,
-            ParameterDescriptor(
-                description='Enable interactive chat input area'
-            )
+            ParameterDescriptor(description='Enable interactive chat area')
+        )
+        self.declare_parameter(
+            'override_css',
+            '',
+            ParameterDescriptor(description='Path to a custom .css file')
         )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.queue_length = self.get_parameter('queue_length').value
         self.enable_chat = self.get_parameter('enable_chat').value
+        self.override_css_path = self.get_parameter('override_css').value
 
         # Shared state
-        self.current_content = ""
         self.lock = threading.Lock()
 
         # Initialize Qt Application
@@ -112,18 +119,12 @@ class WebviewNode(Node):
         self.view = QWebEngineView()
         self.main_window.setCentralWidget(self.view)
 
-        # Custom page for console logging
+        # Custom page for console logging and bridge calls
         self.page = CustomPage(self)
         self.view.setPage(self.page)
 
-        # Setup Bridge for JS -> Python communication
+        # Bridge object
         self.bridge = Bridge(self)
-        self.page.setWebChannel(None)  # Reset
-        # We'll use a simpler runJavaScript approach if possible,
-        # but for clean Slot usage we'll stick to exposing an object
-        # Note: QtWebChannel is usually safer, but for a single slot,
-        # we can also use a custom object injection or just a direct JS prompt.
-        # Let's use the standard "expose object" pattern.
 
         # Load local HTML
         try:
@@ -147,37 +148,52 @@ class WebviewNode(Node):
 
         # Load file with query param for chat state
         url = QUrl.fromLocalFile(str(html_path.absolute()))
+        query_params = []
         if self.enable_chat:
-            url.setQuery("chat=true")
+            query_params.append("chat=true")
+        if query_params:
+            url.setQuery("&".join(query_params))
 
         self.get_logger().info(
             f"Loading UI from: {html_path} (Chat: {self.enable_chat})"
         )
         self.page.load(url)
 
-        # Connect bridge to window object once loaded
-        self.page.loadFinished.connect(self._setup_js_bridge)
+        # Connect bridge and inject CSS once loaded
+        self.page.loadFinished.connect(self._on_load_finished)
 
         self.main_window.show()
 
-    def _setup_js_bridge(self, success):
+    def _on_load_finished(self, success):
         if success:
-            # Simple injection to handle Python calls from JS
+            # 1. Inject Bridge
             self.page.runJavaScript(
                 "window.pythonBridge = { sendMessage: (text) => "
                 "{ console.log('BRIDGE_CALL:' + text); } };"
             )
+            # 2. Inject Custom CSS if provided
+            if self.override_css_path and os.path.exists(self.override_css_path):
+                try:
+                    with open(self.override_css_path, 'r') as f:
+                        css_content = f.read()
+                    # Use a style tag creation logic in JS
+                    js_inject = (
+                        "const style = document.createElement('style');"
+                        f"style.textContent = {repr(css_content)}; "
+                        "document.head.appendChild(style);"
+                    )
+                    self.page.runJavaScript(js_inject)
+                    self.get_logger().info(
+                        f"Injected custom CSS from: {self.override_css_path}"
+                    )
+                except Exception as e:
+                    self.get_logger().error(f"Failed to load CSS: {e}")
 
     def listener_callback(self, msg):
-        with self.lock:
-            self.current_content += msg.data
-            js_code = (
-                "if(window.updateContent) "
-                "window.updateContent("
-                f"{repr(self.current_content)}"
-                ");"
-            )
-            self.page.runJavaScript(js_code)
+        # We now send data chunks. The JS side will handle the accumulation
+        # into a persistent AI block.
+        js_code = f"if(window.appendStream) window.appendStream({repr(msg.data)});"
+        self.page.runJavaScript(js_code)
 
     def run(self):
         # Handle Ctrl+C properly in Qt
@@ -186,25 +202,7 @@ class WebviewNode(Node):
         timer.timeout.connect(self._ros_spin_once)
         timer.start(10)  # 100Hz
 
-        # Poll Console for Bridge Calls (Simpler than full WebChannel)
-        bridge_timer = QTimer()
-        bridge_timer.timeout.connect(self._check_bridge_calls)
-        bridge_timer.start(50)
-
         return self.qt_app.exec()
-
-    def _check_bridge_calls(self):
-        # We'll rely on a manual bridge mechanism since QWebChannel needs
-        # more dependencies
-        pass
-
-    # Alternative: Use simple console.log parsing for the bridge
-    def javaScriptConsoleMessage(self, level, message, line_id, source_id):
-        if message.startswith("BRIDGE_CALL:"):
-            text = message[len("BRIDGE_CALL:"):]
-            self.bridge.sendMessage(text)
-        else:
-            self.get_logger().info(f"[JS] {message}")
 
     def _ros_spin_once(self):
         if rclpy.ok():
@@ -217,8 +215,6 @@ class WebviewNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     renderer = WebviewNode()
-    # Apply the console log handler fix
-    renderer.page.javaScriptConsoleMessage = renderer.javaScriptConsoleMessage
     exit_code = renderer.run()
 
     if rclpy.ok():

@@ -8,7 +8,7 @@
     <!-- Using local libraries for offline high-fidelity rendering -->
     <script src="vendor/marked.min.js"></script>
     <style>
-        /* MASTERMIND NEXUS THEME: INTERACTIVE VERSION */
+        /* MASTERMIND NEXUS THEME: INTERACTIVE BLOCK-BASED VERSION */
         :root {
             --cyan-accent: #008b8b;
             --cyan-glow: rgba(0, 139, 139, 0.4);
@@ -26,11 +26,10 @@
             line-height: 1.4;
             background-image: radial-gradient(rgba(18, 18, 18, 0.75), rgba(0, 0, 0, 0.9));
             user-select: text;
-            /* Enable text selection */
             overflow-x: hidden;
         }
 
-        /* SCANLINES EFFECT (Fixed position) */
+        /* SCANLINES EFFECT */
         body::before {
             content: " ";
             display: block;
@@ -89,7 +88,6 @@
         /* CHAT INPUT AREA */
         #chat-container {
             display: none;
-            /* Hidden by default, toggled via query param */
             margin-top: 15px;
             padding: 10px;
             background: rgba(10, 10, 10, 0.8);
@@ -221,7 +219,7 @@
 <body>
     <div id="root-container">
         <div id="content-area">
-            <!-- Content will be injected here via ROS -->
+            <!-- Blocks will be injected here -->
         </div>
 
         <div id="chat-container">
@@ -242,6 +240,8 @@
         const sendBtn = document.getElementById('send-btn');
 
         let autoScroll = true;
+        let currentAIBlock = null;
+        let currentContent = "";
 
         // Check query params for chat state
         const urlParams = new URLSearchParams(window.location.search);
@@ -255,47 +255,53 @@
             chatInput.style.height = chatInput.scrollHeight + 'px';
         });
 
-        // Chat Logic
+        const createAIBlock = () => {
+            const div = document.createElement('div');
+            div.className = 'ai-response-block';
+            contentArea.appendChild(div);
+            currentAIBlock = div;
+            currentContent = ""; // Reset for new block
+        };
+
+        // Initialize first block
+        createAIBlock();
+
+        const addCursor = () => {
+            const oldCursor = document.querySelector('.cursor');
+            if (oldCursor) oldCursor.remove();
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            contentArea.appendChild(cursor);
+        };
+
         const submitChat = () => {
             const text = chatInput.value.trim();
             if (text) {
-                // 1. Send full text to Python Bridge
+                // 1. Send via Bridge
                 console.log('BRIDGE_CALL:' + text);
 
-                // 2. Prepare Echo Text (Truncate if needed)
+                // 2. Prepare Echo
                 let echoLines = text.split('\n');
                 let echoText = text;
                 let isTruncated = false;
-
-                if (echoLines.length > 2) {
-                    echoText = echoLines.slice(0, 2).join('\n');
-                    isTruncated = true;
-                }
-
-                if (echoText.length > 200) {
-                    echoText = echoText.substring(0, 200);
-                    isTruncated = true;
-                }
-
+                if (echoLines.length > 2) { echoText = echoLines.slice(0, 2).join('\n'); isTruncated = true; }
+                if (echoText.length > 200) { echoText = echoText.substring(0, 200); isTruncated = true; }
                 if (isTruncated) echoText += " ...";
 
-                // 3. Inject Echo into Content Area
+                // 3. Inject Echo Block
                 const echoDiv = document.createElement('div');
                 echoDiv.className = 'uplink-echo';
                 echoDiv.innerText = echoText;
 
-                // Remove existing cursor
-                const oldCursor = document.querySelector('.cursor');
-                if (oldCursor) oldCursor.remove();
-
+                // Insert before current AI block or append? 
+                // We append it to the content area, which "closes" the previous AI behavior.
                 contentArea.appendChild(echoDiv);
 
-                // Re-add cursor after echo
-                const cursor = document.createElement('span');
-                cursor.className = 'cursor';
-                contentArea.appendChild(cursor);
+                // 4. Create NEW AI Block for the next response
+                createAIBlock();
+                addCursor();
 
-                // 4. Cleanup
+                // 5. Cleanup
                 chatInput.value = '';
                 chatInput.style.height = 'auto';
                 contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'smooth' });
@@ -311,16 +317,18 @@
 
         sendBtn.addEventListener('click', submitChat);
 
-        // Scroll Detection
         contentArea.addEventListener('scroll', () => {
-            const atBottom = contentArea.scrollHeight - contentArea.scrollTop <= contentArea.clientHeight + 50;
-            autoScroll = atBottom;
+            autoScroll = (contentArea.scrollHeight - contentArea.scrollTop <= contentArea.clientHeight + 100);
         });
 
-        window.updateContent = (newContent) => {
+        // ROS Streaming Logic
+        window.appendStream = (chunk) => {
+            if (!currentAIBlock) createAIBlock();
+            currentContent += chunk;
             try {
                 if (window.marked) {
-                    contentArea.innerHTML = marked.parse(newContent) + '<span class="cursor"></span>';
+                    currentAIBlock.innerHTML = marked.parse(currentContent);
+                    addCursor();
                     if (autoScroll) {
                         contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
                     }
