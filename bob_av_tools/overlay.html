@@ -1,28 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bob Overlay Premium (Local)</title>
-  <!-- Using local libraries to ensure offline reliability and table support -->
-  <script src="vendor/tailwind.js"></script>
-  <script src="vendor/markdown-it.min.js"></script>
+  <title>BOB NEXUS | OVERLAY</title>
+  <!-- Using local libraries for offline high-fidelity rendering -->
+  <script src="vendor/marked.min.js"></script>
   <style>
+    /* MASTERMIND NEXUS THEME: UNDERGROUND / HACKER SZENE */
     :root {
-      --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.5);
-      --glass-bg: rgba(15, 23, 42, 0.85);
-      --glass-border: rgba(255, 255, 255, 0.12);
+      --cyan-accent: #008b8b;
+      --cyan-glow: rgba(0, 139, 139, 0.4);
+      --bg-dark: #0a0a0a;
+      --text-gray: #dcdcdc;
+      --text-dim: #bbb;
     }
 
     body {
-      background: #0f172a;
+      background-color: var(--bg-dark);
+      color: var(--text-gray);
+      font-family: 'Courier New', Courier, monospace;
       margin: 0;
       padding: 0;
       overflow: hidden;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      color: #f8fafc;
+      line-height: 1.4;
+      background-image: radial-gradient(rgba(18, 18, 18, 0.75), rgba(0, 0, 0, 0.9));
+    }
+
+    /* SCANLINES EFFECT */
+    body::before {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      z-index: 9999;
+      background-size: 100% 3px, 3px 100%;
+      pointer-events: none;
     }
 
     #root-container {
@@ -30,196 +49,115 @@
       flex-direction: column;
       height: 100vh;
       width: 100vw;
-      padding: 1.5rem;
-      /* Reduced from 2.5rem */
       box-sizing: border-box;
+      padding: 40px;
+      /* Adjust padding for video framing */
     }
 
-    .glass-panel {
-      position: relative;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background: var(--glass-bg);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border: 1px solid var(--glass-border);
-      border-radius: 2.5rem;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-      overflow: hidden;
-      border-left: 10px solid var(--accent);
-    }
-
-    header {
-      padding: 1.5rem 2.5rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .status-dot {
-      width: 0.8rem;
-      height: 0.8rem;
-      background: var(--accent);
-      border-radius: 50%;
-      box-shadow: 0 0 15px var(--accent-glow);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0% {
-        transform: scale(0.9);
-        opacity: 0.7;
-      }
-
-      50% {
-        transform: scale(1.1);
-        opacity: 1;
-      }
-
-      100% {
-        transform: scale(0.9);
-        opacity: 0.7;
-      }
-    }
-
-    .brand-title {
-      font-size: 1.2rem;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.4em;
-      color: var(--accent);
-    }
-
+    /* ONLY THE CONTENT AREA STYLE */
     #content-area {
       flex: 1;
-      padding: 1.5rem 1.75rem;
-      /* Reduced from 2rem 2.5rem */
+      font-size: 1.3rem;
+      /* Larger for video visibility */
+      color: var(--text-dim);
+      padding: 20px;
       overflow-y: auto;
       scrollbar-width: none;
+      background: rgba(0, 0, 0, 0.3);
+      border-left: 2px solid var(--cyan-accent);
     }
 
     #content-area::-webkit-scrollbar {
       display: none;
     }
 
-    /* Premium Markdown Support (Full Library) */
-    .md-render {
-      font-size: 1.25rem;
-      /* Reduced from 1.5rem for better density */
-      line-height: 1.5;
+    /* MARKDOWN STYLING - PORTED FROM SCREENSHOT */
+    #content-area h1,
+    #content-area h2,
+    #content-area h3 {
+      color: var(--cyan-accent);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 1.5rem;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 5px var(--cyan-accent);
     }
 
-    .md-render h1 {
-      font-size: 2.5rem;
+    #content-area h1 {
+      font-size: 1.6rem;
       font-weight: 900;
-      margin: 1.5rem 0 1rem;
-      color: #60a5fa;
     }
 
-    .md-render h2 {
-      font-size: 1.8rem;
-      font-weight: 800;
-      margin: 1.2rem 0 0.8rem;
-      color: #93c5fd;
-    }
-
-    .md-render p {
-      margin-bottom: 1.25rem;
-    }
-
-    .md-render strong {
-      color: #fdfdfd;
+    #content-area h2 {
+      font-size: 1.4rem;
       font-weight: 800;
     }
 
-    .md-render hr {
-      border: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent), transparent);
-      margin: 2rem 0;
-      opacity: 0.3;
+    #content-area p {
+      margin-bottom: 1.2rem;
     }
 
-    .md-render code {
-      background: rgba(0, 0, 0, 0.4);
-      padding: 0.2em 0.4em;
-      border-radius: 0.4rem;
-      font-family: monospace;
-    }
-
-    /* Table Styling - Premium Glass Look */
-    .md-render table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      margin: 1.5rem 0;
-      border-radius: 1rem;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .md-render th {
-      background: rgba(255, 255, 255, 0.05);
-      text-align: left;
-      padding: 1rem;
-      font-weight: 800;
-      color: var(--accent);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .md-render td {
-      padding: 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      background: rgba(0, 0, 0, 0.1);
-    }
-
-    /* List Styling - Restoring what Tailwind reset */
-    .md-render ul,
-    .md-render ol {
-      margin: 1rem 0;
+    #content-area ul,
+    #content-area ol {
+      margin: 1.2rem 0;
       padding-left: 2rem;
     }
 
-    .md-render ul {
-      list-style-type: disc;
+    #content-area li {
+      margin-bottom: 0.6rem;
     }
 
-    .md-render ol {
-      list-style-type: decimal;
-    }
-
-    .md-render li {
-      margin-bottom: 0.5rem;
-    }
-
-    .md-render blockquote {
-      border-left: 4px solid var(--accent);
-      background: rgba(255, 255, 255, 0.03);
-      padding: 1rem 1.5rem;
+    #content-area blockquote {
+      border-left: 4px solid #444;
       margin: 1.5rem 0;
+      padding: 10px 20px;
+      color: #888;
       font-style: italic;
-      border-radius: 0 1rem 1rem 0;
+      background: rgba(255, 255, 255, 0.02);
     }
 
-    .md-render tr:last-child td {
-      border-bottom: none;
+    #content-area code {
+      background: #1a1a1a;
+      color: #ff8c00;
+      padding: 2px 6px;
+      font-size: 1.1rem;
+      border-radius: 3px;
     }
 
-    .line-entry {
-      animation: slideIn 0.3s ease-out forwards;
+    #content-area table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      background: rgba(255, 255, 255, 0.01);
     }
 
-    @keyframes slideIn {
-      from {
+    #content-area th {
+      border-bottom: 2px solid var(--cyan-accent);
+      color: var(--cyan-accent);
+      text-align: left;
+      padding: 12px;
+      font-weight: 900;
+    }
+
+    #content-area td {
+      border-bottom: 1px solid #222;
+      padding: 10px;
+    }
+
+    /* CURSOR */
+    .cursor {
+      display: inline-block;
+      width: 12px;
+      height: 1.4rem;
+      background-color: var(--cyan-accent);
+      margin-left: 8px;
+      vertical-align: middle;
+      animation: blinker 0.8s step-end infinite;
+    }
+
+    @keyframes blinker {
+      50% {
         opacity: 0;
-        transform: translateY(5px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
       }
     }
   </style>
@@ -227,75 +165,23 @@
 
 <body>
   <div id="root-container">
-    <div class="glass-panel">
-      <header>
-        <div class="status-dot"></div>
-        <div class="brand-title">Bob Intelligence</div>
-      </header>
-      <div id="content-area" class="md-render">
-        <div class="line-entry">
-          <h1># System Init</h1>
-          <p>Local libraries loaded. Waiting for LLM tokens...</p>
-        </div>
-      </div>
+    <!-- Concentrating on the Mastermind Chronicles view -->
+    <div id="content-area">
+      <!-- Content will be injected here via ROS -->
     </div>
   </div>
 
   <script>
     const contentArea = document.getElementById('content-area');
-    let md;
-
-    // Initialize Markdown-it with full features
-    if (window.markdownit) {
-      md = window.markdownit({
-        html: true,
-        linkify: true,
-        breaks: false, // Turned off breaks:true as it can break table parsing
-        typographer: true
-      });
-      console.log("Bob Overlay: Local markdown-it initialized.");
-    } else {
-      console.warn("Bob Overlay: Local library fail! Using basic fallback.");
-      md = { render: (text) => text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') };
-    }
 
     window.updateContent = (newContent) => {
-      const lines = newContent.split('\n');
-      const processed = [];
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmed = line.trim();
-
-        // 1. Block Start Detection (Lists, Headers, Tables)
-        // Ensure a blank line exists before a new block starts
-        const isBlockStart = /^([-*+]\s|\d+\.\s|#+\s|\|)/.test(trimmed);
-        if (isBlockStart && i > 0 && processed.length > 0 && processed[processed.length - 1].trim() !== "") {
-          processed.push("");
-        }
-
-        processed.push(line);
-
-        // 2. Table Repair (Headerless Tables)
-        // If we see piped rows without a separator, inject the |---| line
-        if (trimmed.startsWith('|') && i < lines.length - 1) {
-          const nextLine = lines[i + 1].trim();
-          if (nextLine.startsWith('|') && !nextLine.includes('---')) {
-            const cols = (trimmed.match(/\|/g) || []).length - 1;
-            if (cols > 0) {
-              processed.push('|' + '---|'.repeat(cols));
-            }
-          }
-        }
-      }
-
-      const sanitized = processed.join('\n')
-        .replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
-
       try {
-        contentArea.innerHTML = md.render(sanitized);
-        // Instant scroll for reactive streaming feel
-        contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
+        if (window.marked) {
+          // Add cursor during streaming
+          contentArea.innerHTML = marked.parse(newContent) + '<span class="cursor"></span>';
+          // Instant scroll for reactive feel
+          contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
+        }
       } catch (e) {
         console.error("Render Error:", e);
       }
