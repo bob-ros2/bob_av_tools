@@ -148,6 +148,25 @@
             fill: currentColor;
         }
 
+        /* UPLINK ECHO STYLE */
+        .uplink-echo {
+            margin: 1.5rem 0;
+            padding: 12px 20px;
+            background: rgba(0, 139, 139, 0.05);
+            border: 1px solid rgba(0, 139, 139, 0.2);
+            border-left: 4px solid var(--cyan-accent);
+            color: var(--cyan-accent);
+            font-size: 0.95rem;
+            position: relative;
+        }
+
+        .uplink-echo::before {
+            content: "UPLINK > ";
+            font-weight: 900;
+            letter-spacing: 2px;
+            opacity: 0.7;
+        }
+
         /* MARKDOWN STYLING */
         #content-area h1,
         #content-area h2,
@@ -240,9 +259,46 @@
         const submitChat = () => {
             const text = chatInput.value.trim();
             if (text) {
+                // 1. Send full text to Python Bridge
                 console.log('BRIDGE_CALL:' + text);
+
+                // 2. Prepare Echo Text (Truncate if needed)
+                let echoLines = text.split('\n');
+                let echoText = text;
+                let isTruncated = false;
+
+                if (echoLines.length > 2) {
+                    echoText = echoLines.slice(0, 2).join('\n');
+                    isTruncated = true;
+                }
+
+                if (echoText.length > 200) {
+                    echoText = echoText.substring(0, 200);
+                    isTruncated = true;
+                }
+
+                if (isTruncated) echoText += " ...";
+
+                // 3. Inject Echo into Content Area
+                const echoDiv = document.createElement('div');
+                echoDiv.className = 'uplink-echo';
+                echoDiv.innerText = echoText;
+
+                // Remove existing cursor
+                const oldCursor = document.querySelector('.cursor');
+                if (oldCursor) oldCursor.remove();
+
+                contentArea.appendChild(echoDiv);
+
+                // Re-add cursor after echo
+                const cursor = document.createElement('span');
+                cursor.className = 'cursor';
+                contentArea.appendChild(cursor);
+
+                // 4. Cleanup
                 chatInput.value = '';
                 chatInput.style.height = 'auto';
+                contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'smooth' });
             }
         };
 
