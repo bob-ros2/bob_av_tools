@@ -39,14 +39,24 @@ ros2 run bob_av_tools webvideo
 ros2 run bob_av_tools webvideo --ros-args \
   --remap llm_stream:=/my/input/topic \
   --remap web_image:=/my/output/overlay
+
+# Environment variable configuration
+export WEBVIDEO_WIDTH=1920
+export WEBVIDEO_HEIGHT=1080
+export WEBVIDEO_QUEUE_LENGTH=2000
+ros2 run bob_av_tools webvideo
 ```
 
 #### Parameters (Configuration):
-| Parameter | Default | Description |
+All parameters support environment variable overrides using the `WEBVIDEO_` prefix.
+
+| Parameter | Default (Env Var) | Description |
 |-----------|---------|-------------|
-| `width` | `854` | Render width. |
-| `height` | `480` | Render height. |
-| `fps` | `30.0` | Frames per second. |
+| `width` | `854` (`WEBVIDEO_WIDTH`) | Render width. |
+| `height` | `480` (`WEBVIDEO_HEIGHT`) | Render height. |
+| `fps` | `30.0` (`WEBVIDEO_FPS`) | Frames per second. |
+| `fifo_path` | `/tmp/web_fifo` (`WEBVIDEO_FIFO_PATH`) | Path to the raw video FIFO. |
+| `queue_length` | `1000` (`WEBVIDEO_QUEUE_LENGTH`) | Subscription queue depth. |
 
 #### Fixed Topics (Remappable):
 | Topic Name | Type | Description |
@@ -55,7 +65,7 @@ ros2 run bob_av_tools webvideo --ros-args \
 | `web_image`  | `sensor_msgs/msg/Image` | Output topic for the rendered frames. |
 
 #### Fixed Assets / Paths:
-- **FIFO**: `/tmp/web_fifo` (BGRA raw video)
+- **FIFO**: Default `/tmp/web_fifo` (BGRA raw video)
 - **Overlay**: `share/bob_av_tools/overlay.html`
 
 ### FIFO Helper (`write_fifo.sh`)

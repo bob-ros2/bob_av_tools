@@ -30,7 +30,8 @@
       flex-direction: column;
       height: 100vh;
       width: 100vw;
-      padding: 2.5rem;
+      padding: 1.5rem;
+      /* Reduced from 2.5rem */
       box-sizing: border-box;
     }
 
@@ -93,7 +94,8 @@
 
     #content-area {
       flex: 1;
-      padding: 2rem 2.5rem;
+      padding: 1.5rem 1.75rem;
+      /* Reduced from 2rem 2.5rem */
       overflow-y: auto;
       scrollbar-width: none;
     }
@@ -104,8 +106,9 @@
 
     /* Premium Markdown Support (Full Library) */
     .md-render {
-      font-size: 1.5rem;
-      line-height: 1.6;
+      font-size: 1.25rem;
+      /* Reduced from 1.5rem for better density */
+      line-height: 1.5;
     }
 
     .md-render h1 {
@@ -219,7 +222,7 @@
       md = window.markdownit({
         html: true,
         linkify: true,
-        breaks: true,
+        breaks: false, // Turned off breaks:true as it can break table parsing
         typographer: true
       });
       console.log("Bob Overlay: Local markdown-it initialized.");
@@ -229,11 +232,15 @@
     }
 
     window.updateContent = (newContent) => {
+      // Ensure tables start on a new line and have proper spacing
+      let sanitized = newContent.replace(/([^\n])\n\|/g, '$1\n\n|');
       // Force HR onto new line
-      const sanitized = newContent.replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
+      sanitized = sanitized.replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
+
       try {
         contentArea.innerHTML = md.render(sanitized);
-        contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'smooth' });
+        // Smooth scroll to bottom
+        contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
       } catch (e) {
         console.error("Render Error:", e);
       }

@@ -2,10 +2,16 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>bob_av_tools</name>
-  <version>0.0.0</version>
+  <version>0.1.0</version>
   <description>A collection of audio-visual utilities for the Bob ROS 2 ecosystem.</description>
   <maintainer email="bobmeuchelm@gmail.com">Bob Ros</maintainer>
   <license>Apache-2.0</license>
+
+  <url type="website">https://github.com/bob-ros2/bob_av_tools</url>
+  <url type="repository">https://github.com/bob-ros2/bob_av_tools</url>
+  <url type="bugtracker">https://github.com/bob-ros2/bob_av_tools/issues</url>
+
+  <author email="bobmeuchelm@gmail.com">Bob Ros</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>

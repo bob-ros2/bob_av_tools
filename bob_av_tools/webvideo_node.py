@@ -68,15 +68,33 @@ class WebRenderer(Node):
             f"Web Video Node starting on ROS_DOMAIN_ID: {domain_id}"
         )
 
-        # Parameters
-        self.declare_parameter('width', 854)
-        self.declare_parameter('height', 480)
-        self.declare_parameter('fps', 30.0)
+        # Parameters with Env-Var defaults
+        self.declare_parameter(
+            'width',
+            int(os.environ.get('WEBVIDEO_WIDTH', 854))
+        )
+        self.declare_parameter(
+            'height',
+            int(os.environ.get('WEBVIDEO_HEIGHT', 480))
+        )
+        self.declare_parameter(
+            'fps',
+            float(os.environ.get('WEBVIDEO_FPS', 30.0))
+        )
+        self.declare_parameter(
+            'fifo_path',
+            os.environ.get('WEBVIDEO_FIFO_PATH', '/tmp/web_fifo')
+        )
+        self.declare_parameter(
+            'queue_length',
+            int(os.environ.get('WEBVIDEO_QUEUE_LENGTH', 1000))
+        )
 
-        self.fifo_path = '/tmp/web_fifo'
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.fps = self.get_parameter('fps').value
+        self.fifo_path = self.get_parameter('fifo_path').value
+        self.queue_length = self.get_parameter('queue_length').value
 
         # ROS Publishers & Subscriptions
         # Fixed topic name 'web_image', can be remapped
@@ -92,7 +110,7 @@ class WebRenderer(Node):
             String,
             'llm_stream',
             self.listener_callback,
-            20
+            self.queue_length
         )
 
         # FIFO Setup
