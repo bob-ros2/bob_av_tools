@@ -49,7 +49,9 @@ class Bridge(QObject):
         msg = String()
         msg.data = text
         self.node.chat_pub.publish(msg)
-        self.node.get_logger().info(f"Published chat message: '{text[:20]}...'")
+        self.node.get_logger().info(
+            f"Published chat message: '{text[:20]}...'"
+        )
 
 
 class CustomPage(QWebEnginePage):
@@ -84,7 +86,9 @@ class WebviewNode(Node):
         self.declare_parameter(
             'enable_chat',
             False,
-            ParameterDescriptor(description='Enable interactive chat input area')
+            ParameterDescriptor(
+                description='Enable interactive chat input area'
+            )
         )
 
         self.width = self.get_parameter('width').value
@@ -146,7 +150,9 @@ class WebviewNode(Node):
         if self.enable_chat:
             url.setQuery("chat=true")
 
-        self.get_logger().info(f"Loading UI from: {html_path} (Chat: {self.enable_chat})")
+        self.get_logger().info(
+            f"Loading UI from: {html_path} (Chat: {self.enable_chat})"
+        )
         self.page.load(url)
 
         # Connect bridge to window object once loaded
@@ -157,7 +163,10 @@ class WebviewNode(Node):
     def _setup_js_bridge(self, success):
         if success:
             # Simple injection to handle Python calls from JS
-            self.page.runJavaScript("window.pythonBridge = { sendMessage: (text) => { console.log('BRIDGE_CALL:' + text); } };")
+            self.page.runJavaScript(
+                "window.pythonBridge = { sendMessage: (text) => "
+                "{ console.log('BRIDGE_CALL:' + text); } };"
+            )
 
     def listener_callback(self, msg):
         with self.lock:
@@ -177,7 +186,7 @@ class WebviewNode(Node):
         timer.timeout.connect(self._ros_spin_once)
         timer.start(10)  # 100Hz
 
-        # Poll Console for Bridge Calls (Simpler than full WebChannel for one string)
+        # Poll Console for Bridge Calls (Simpler than full WebChannel)
         bridge_timer = QTimer()
         bridge_timer.timeout.connect(self._check_bridge_calls)
         bridge_timer.start(50)
@@ -185,7 +194,8 @@ class WebviewNode(Node):
         return self.qt_app.exec()
 
     def _check_bridge_calls(self):
-        # We'll rely on a manual bridge mechanism since QWebChannel needs more dependencies
+        # We'll rely on a manual bridge mechanism since QWebChannel needs
+        # more dependencies
         pass
 
     # Alternative: Use simple console.log parsing for the bridge
