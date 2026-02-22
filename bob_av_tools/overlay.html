@@ -175,6 +175,34 @@
       background: rgba(0, 0, 0, 0.1);
     }
 
+    /* List Styling - Restoring what Tailwind reset */
+    .md-render ul,
+    .md-render ol {
+      margin: 1rem 0;
+      padding-left: 2rem;
+    }
+
+    .md-render ul {
+      list-style-type: disc;
+    }
+
+    .md-render ol {
+      list-style-type: decimal;
+    }
+
+    .md-render li {
+      margin-bottom: 0.5rem;
+    }
+
+    .md-render blockquote {
+      border-left: 4px solid var(--accent);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 1rem 1.5rem;
+      margin: 1.5rem 0;
+      font-style: italic;
+      border-radius: 0 1rem 1rem 0;
+    }
+
     .md-render tr:last-child td {
       border-bottom: none;
     }
@@ -232,14 +260,41 @@
     }
 
     window.updateContent = (newContent) => {
-      // Ensure tables start on a new line and have proper spacing
-      let sanitized = newContent.replace(/([^\n])\n\|/g, '$1\n\n|');
-      // Force HR onto new line
-      sanitized = sanitized.replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
+      const lines = newContent.split('\n');
+      const processed = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        // 1. Block Start Detection (Lists, Headers, Tables)
+        // Ensure a blank line exists before a new block starts
+        const isBlockStart = /^([-*+]\s|\d+\.\s|#+\s|\|)/.test(trimmed);
+        if (isBlockStart && i > 0 && processed.length > 0 && processed[processed.length - 1].trim() !== "") {
+          processed.push("");
+        }
+
+        processed.push(line);
+
+        // 2. Table Repair (Headerless Tables)
+        // If we see piped rows without a separator, inject the |---| line
+        if (trimmed.startsWith('|') && i < lines.length - 1) {
+          const nextLine = lines[i + 1].trim();
+          if (nextLine.startsWith('|') && !nextLine.includes('---')) {
+            const cols = (trimmed.match(/\|/g) || []).length - 1;
+            if (cols > 0) {
+              processed.push('|' + '---|'.repeat(cols));
+            }
+          }
+        }
+      }
+
+      const sanitized = processed.join('\n')
+        .replace(/([^\n])\-\-\-([^\n])/g, '$1\n\n---\n\n$2');
 
       try {
         contentArea.innerHTML = md.render(sanitized);
-        // Smooth scroll to bottom
+        // Instant scroll for reactive streaming feel
         contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
       } catch (e) {
         console.error("Render Error:", e);
