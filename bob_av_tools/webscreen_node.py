@@ -49,7 +49,7 @@ try:
     from PySide6.QtWebEngineWidgets import QWebEngineView
     from PySide6.QtNetwork import QNetworkCookie
     from PySide6.QtCore import QUrl, QTimer, QByteArray
-    from PySide6.QtGui import QImage, QPainter
+    from PySide6.QtGui import QImage
 except ImportError as e:
     print(f"Error: {e}. Please install PySide6 with: pip install PySide6")
     sys.exit(1)
@@ -249,10 +249,10 @@ class WebScreenNode(Node):
 
     def capture_frame(self):
         """Capture the current render, publish to ROS, and write to FIFO."""
-        image = QImage(self.width, self.height, QImage.Format.Format_ARGB32)
-        painter = QPainter(image)
-        self.view.render(painter, sourceRegion=None)
-        painter.end()
+        # grab() renders the widget into a QPixmap – the correct offscreen way
+        pixmap = self.view.grab()
+        image = pixmap.toImage().convertToFormat(
+            QImage.Format.Format_ARGB32)
 
         if HAS_CV_BRIDGE:
             try:
@@ -312,7 +312,7 @@ def main(args=None):
     os.environ['QT_QPA_PLATFORM'] = 'offscreen'
     flags = (
         '--disable-gpu --no-sandbox '
-        '--disable-software-rasterizer --single-process'
+        '--disable-software-rasterizer'
     )
     os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = (
         os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS', '') + ' ' + flags
