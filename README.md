@@ -6,6 +6,7 @@ A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package
 
 - **`webvideo` Node**: Renders an offscreen browser overlay with auto-reconnecting FIFO output (BGRA raw) or ROS Image topics. Optimized for "Nexus/Matrix" aesthetics.
 - **`webview` Node**: Interactive sibling of `webvideo` that opens a GUI window, supporting interactive chat ("Uplink Echo") and live stream display.
+- **`webscreen` Node**: Renders **any URL** offscreen and streams it to FIFO/ROS Image. Supports cookie injection (JSON file) and JavaScript pre-script injection for browser automation.
 - **Robust FIFO Reconnect**: Advanced producer/consumer handling (`O_NONBLOCK` + `fcntl`) that allows ffmpeg, ffplay, or `bob_sdlviz` to connect and disconnect without breaking the pipeline.
 - **Offline Aesthetic**: Pre-bundled `marked.min.js` for Markdown rendering and Vanilla CSS "Nexus Style" design—no internet or heavy frameworks required.
 - **Custom CSS Overrides**: Inject your own styles at runtime using ROS parameters.
@@ -49,6 +50,24 @@ Opens a visible interactive window.
 ```bash
 # Run with interactive chat enabled
 ros2 run bob_av_tools webview --ros-args -p enable_chat:=true
+```
+
+### URL Screen Capture (`webscreen`)
+Renders any URL and streams it to FIFO / ROS Image topic.
+
+```bash
+# Capture a website and stream to /tmp/webscreen_fifo
+ros2 run bob_av_tools webscreen --ros-args \
+  -p url:=https://twitch.tv/superbob_6110
+
+# With cookie auth and a pre-script
+ros2 run bob_av_tools webscreen --ros-args \
+  -p url:=https://example.com \
+  -p cookies_file:=/home/ros/cookies.json \
+  -p pre_script:=/home/ros/dismiss_banner.js
+
+# Then consume with ffplay
+ffplay -f rawvideo -pixel_format bgra -video_size 1280x720 -i /tmp/webscreen_fifo
 ```
 
 ---

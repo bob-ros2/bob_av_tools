@@ -192,7 +192,6 @@ class WebRenderer(Node):
         except OSError:
             pass  # No reader yet, will retry on next timer tick
 
-
     def _on_load_finished(self, success):
         css_exists = (
             self.override_css_path and
