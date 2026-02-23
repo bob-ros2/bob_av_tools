@@ -249,7 +249,7 @@ class WebScreenNode(Node):
 
     def capture_frame(self):
         """Capture the current render, publish to ROS, and write to FIFO."""
-        image = QImage(self.width, self.height, QImage.Format.Format_BGRA8888)
+        image = QImage(self.width, self.height, QImage.Format.Format_ARGB32)
         painter = QPainter(image)
         self.view.render(painter, sourceRegion=None)
         painter.end()
