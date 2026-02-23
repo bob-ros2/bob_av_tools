@@ -1,0 +1,51 @@
+name: CI – Build & Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+    container:
+      image: ros:humble-ros-base
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: src/bob_av_tools
+
+      - name: Install system dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            build-essential \
+            cmake \
+            python3-pip \
+            ros-humble-cv-bridge \
+            ros-humble-sensor-msgs \
+            ros-humble-std-msgs \
+            ros-humble-ament-lint-auto \
+            ros-humble-ament-cmake-flake8 \
+            ros-humble-ament-cmake-pep257 \
+            ros-humble-ament-cmake-xmllint \
+          && rm -rf /var/lib/apt/lists/*
+
+      - name: Install Python dependencies
+        run: pip3 install --no-cache-dir -r src/bob_av_tools/requirements.txt
+
+      - name: Build
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --packages-select bob_av_tools
+
+      - name: Test
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          colcon test --packages-select bob_av_tools --event-handlers console_cohesion+
+          colcon test-result --verbose

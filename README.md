@@ -1,5 +1,8 @@
 # bob_av_tools
 
+[![CI – Build & Test](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml)
+[![Docker – Build & Push](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml)
+
 A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package provides high-fidelity web-based video rendering, interactive terminal overlays, and robust FIFO stream orchestration.
 
 ## 🚀 Key Features
