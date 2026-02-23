@@ -220,6 +220,11 @@ class WebviewNode(Node):
 
 
 def main(args=None):
+    # Set Chromium flags via env var - reliable for both ros2 run and ros2 launch
+    flags = "--disable-gpu --no-sandbox --disable-software-rasterizer --single-process"
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
+        os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "") + " " + flags
+    ).strip()
     rclpy.init(args=args)
     renderer = WebviewNode()
     exit_code = renderer.run()

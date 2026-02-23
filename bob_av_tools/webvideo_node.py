@@ -267,13 +267,12 @@ class WebRenderer(Node):
 
 def main(args=None):
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    # Set Chromium flags via env var - reliable for both ros2 run and ros2 launch
+    flags = "--disable-gpu --no-sandbox --disable-software-rasterizer --single-process"
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
+        os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "") + " " + flags
+    ).strip()
     rclpy.init(args=args)
-
-    # Chromium flags
-    sys.argv.append("--disable-gpu")
-    sys.argv.append("--no-sandbox")
-    sys.argv.append("--disable-software-rasterizer")
-    sys.argv.append("--single-process")
 
     renderer = WebRenderer()
     exit_code = renderer.run()
