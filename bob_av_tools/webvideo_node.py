@@ -125,16 +125,14 @@ class WebRenderer(Node):
             self.queue_length
         )
 
-        # FIFO Setup
+        # FIFO Setup (non-blocking, auto-reconnect)
         self.fifo_fd = None
         if self.fifo_path:
             if not os.path.exists(self.fifo_path):
                 os.mkfifo(self.fifo_path)
             self.get_logger().info(
-                f"Opening FIFO: {self.fifo_path} (Waiting for reader...)"
+                f"FIFO ready: {self.fifo_path} (waiting for reader...)"
             )
-            self.fifo_fd = os.open(self.fifo_path, os.O_WRONLY)
-            self.get_logger().info("FIFO opened for writing.")
 
         # Shared state
         self.current_content = ""
@@ -172,6 +170,24 @@ class WebRenderer(Node):
         self.timer = QTimer()
         self.timer.timeout.connect(self.capture_frame)
         self.timer.start(int(1000 / self.fps))
+
+        # FIFO reconnect timer (must be created AFTER QApplication)
+        if self.fifo_path:
+            self.reconnect_timer = QTimer()
+            self.reconnect_timer.timeout.connect(self._try_reconnect_fifo)
+            self.reconnect_timer.start(1000)
+
+    def _try_reconnect_fifo(self):
+        """Try to open the FIFO in non-blocking write mode."""
+        if self.fifo_fd is not None:
+            return  # Already connected
+        try:
+            fd = os.open(self.fifo_path, os.O_WRONLY | os.O_NONBLOCK)
+            self.fifo_fd = fd
+            self.get_logger().info("FIFO connected to reader.")
+        except OSError:
+            pass  # No reader yet, will retry on next timer tick
+
 
     def _on_load_finished(self, success):
         css_exists = (
@@ -233,7 +249,7 @@ class WebRenderer(Node):
                 self.get_logger().error(f"Failed to publish image: {e}")
 
         # 2. Write to FIFO if enabled
-        if self.fifo_fd:
+        if self.fifo_fd is not None:
             data = image.constBits().tobytes()
             try:
                 total_sent = 0
@@ -243,12 +259,21 @@ class WebRenderer(Node):
                         break
                     total_sent += sent
             except OSError as e:
-                if e.errno == 32:  # Broken pipe
-                    self.get_logger().warn("Reader disconnected. Exit.")
-                    os.close(self.fifo_fd)
+                # 32=EPIPE (broken pipe), 11=EAGAIN (non-blocking would block)
+                if e.errno == 32:  # Broken pipe - reader disconnected
+                    self.get_logger().warn("Reader disconnected, waiting...")
+                    try:
+                        os.close(self.fifo_fd)
+                    except OSError:
+                        pass
                     self.fifo_fd = None
-                else:
+                elif e.errno != 11:  # Ignore EAGAIN, log others
                     self.get_logger().error(f"FIFO write failed: {e}")
+                    try:
+                        os.close(self.fifo_fd)
+                    except OSError:
+                        pass
+                    self.fifo_fd = None
 
     def run(self):
         signal.signal(signal.SIGINT, signal.SIG_DFL)
