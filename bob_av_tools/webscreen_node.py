@@ -157,7 +157,8 @@ class WebScreenNode(Node):
         # ── WebEngineView ────────────────────────────────────────────────────
         self.page = CustomPage(self)
         self.page.setBackgroundColor(
-            self.qt_app.palette().color(self.qt_app.palette().Base))
+            self.qt_app.palette().color(
+                self.qt_app.palette().ColorRole.Base))
         self.view = QWebEngineView()
         self.view.setPage(self.page)
         self.view.resize(self.width, self.height)
