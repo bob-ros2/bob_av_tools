@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import fcntl
 import os
 import signal
 import sys
@@ -183,6 +184,9 @@ class WebRenderer(Node):
             return  # Already connected
         try:
             fd = os.open(self.fifo_path, os.O_WRONLY | os.O_NONBLOCK)
+            # Switch back to blocking for reliable full-frame writes
+            flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+            fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
             self.fifo_fd = fd
             self.get_logger().info("FIFO connected to reader.")
         except OSError:
