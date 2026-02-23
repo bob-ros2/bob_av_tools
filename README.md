@@ -1,13 +1,14 @@
 # bob_av_tools
 
-A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package provides high-fidelity web-based video rendering, FIFO management, and stream orchestration tools.
+A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package provides high-fidelity web-based video rendering, interactive terminal overlays, and robust FIFO stream orchestration.
 
 ## 🚀 Key Features
 
-- **`webvideo` Node**: Renders a premium HTML/JS overlay using QtWebEngine and outputs it to a FIFO pipe or a ROS Image topic.
-- **`write_fifo.sh`**: A robust utility for feeding external data into FIFO pipes with proper buffer handling.
-- **Premium Offline Rendering**: Integrated Markdown engine (`markdown-it`) and Tailwind CSS for high-quality visuals without internet dependency.
-- **Duale Video-Ausgabe**: Gleichzeitige Ausgabe via FIFO (für FFmpeg/sdlviz) und ROS Image Topic (`cv_bridge`).
+- **`webvideo` Node**: Renders an offscreen browser overlay with auto-reconnecting FIFO output (BGRA raw) or ROS Image topics. Optimized for "Nexus/Matrix" aesthetics.
+- **`webview` Node**: Interactive sibling of `webvideo` that opens a GUI window, supporting interactive chat ("Uplink Echo") and live stream display.
+- **Robust FIFO Reconnect**: Advanced producer/consumer handling (`O_NONBLOCK` + `fcntl`) that allows ffmpeg, ffplay, or `bob_sdlviz` to connect and disconnect without breaking the pipeline.
+- **Offline Aesthetic**: Pre-bundled `marked.min.js` for Markdown rendering and Vanilla CSS "Nexus Style" design—no internet or heavy frameworks required.
+- **Custom CSS Overrides**: Inject your own styles at runtime using ROS parameters.
 
 ---
 
@@ -19,7 +20,7 @@ Ensure you have the following Python libraries:
 pip install PySide6 numpy
 ```
 
-System dependencies for QtWebEngine (Headless):
+System dependencies for QtWebEngine:
 ```bash
 sudo apt update
 sudo apt install libxcb-cursor0 libgbm1 libnss3 libasound2
@@ -33,58 +34,63 @@ sudo apt install libxcb-cursor0 libgbm1 libnss3 libasound2
 Renders an offscreen browser and sends frames to a video pipe or ROS topic.
 
 ```bash
+# Basic run (default FIFO: /tmp/web_fifo)
 ros2 run bob_av_tools webvideo
 
-# Remapping examples (changing topics)
+# Advanced: Custom CSS and remapping
 ros2 run bob_av_tools webvideo --ros-args \
-  --remap llm_stream:=/my/input/topic \
-  --remap web_image:=/my/output/overlay
-
-# Environment variable configuration
-export WEBVIDEO_WIDTH=1920
-export WEBVIDEO_HEIGHT=1080
-export WEBVIDEO_QUEUE_LENGTH=2000
-ros2 run bob_av_tools webvideo
+  --remap llm_stream:=/bob/llm_stream \
+  -p override_css:=/path/to/my_style.css
 ```
 
-#### Parameters (Configuration):
-All parameters support environment variable overrides using the `WEBVIDEO_` prefix.
-
-| Parameter | Default (Env Var) | Description |
-|-----------|---------|-------------|
-| `width` | `854` (`WEBVIDEO_WIDTH`) | Render width. |
-| `height` | `480` (`WEBVIDEO_HEIGHT`) | Render height. |
-| `fps` | `30.0` (`WEBVIDEO_FPS`) | Frames per second. |
-| `fifo_path` | `/tmp/web_fifo` (`WEBVIDEO_FIFO_PATH`) | Path to the raw video FIFO. |
-| `queue_length` | `1000` (`WEBVIDEO_QUEUE_LENGTH`) | Subscription queue depth. |
-
-#### Fixed Topics (Remappable):
-| Topic Name | Type | Description |
-|------------|------|-------------|
-| `llm_stream` | `std_msgs/msg/String` | Input topic for text/markdown content. |
-| `web_image`  | `sensor_msgs/msg/Image` | Output topic for the rendered frames. |
-
-#### Fixed Assets / Paths:
-- **FIFO**: Default `/tmp/web_fifo` (BGRA raw video)
-- **Overlay**: `share/bob_av_tools/overlay.html`
-
-### FIFO Helper (`write_fifo.sh`)
-Pipes data into a FIFO, creating it if necessary.
+### Webview Terminal (`webview`)
+Opens a visible interactive window.
 
 ```bash
-cat my_video.bgra | ros2 run bob_av_tools write_fifo.sh --path /tmp/video_pipe
+# Run with interactive chat enabled
+ros2 run bob_av_tools webview --ros-args -p enable_chat:=true
 ```
 
 ---
 
-## 🎨 Premium Overlay Customization
+## ⚙️ Configuration
 
-The renderer uses an `overlay.html` file with an integrated Markdown parser. It supports:
-- **Glassmorphism**: Advanced blur and glowing accents.
-- **Markdown**: Headers, bold/italic, lists, tables, and code blocks.
-- **Animations**: Slide-in transitions for new content.
+### Parameters
+All parameters support environment variable overrides (prefix `WEBVIEW_` for webview, `WEBVIDEO_` for webvideo).
 
-To customize the design, you can modify `overlay.html` in the package source or override it via parameters (future).
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `width` | `854` (video) / `1024` (view) | Canvas/Window width. |
+| `height` | `480` (video) / `768` (view) | Canvas/Window height. |
+| `fps` | `30.0` (video only) | Frames per second for capture. |
+| `fifo_path` | `/tmp/web_fifo` (video only) | Path to the raw video FIFO. |
+| `enable_chat` | `false` (webview only) | Enables the interactive chat area. |
+| `override_css`| `''` | Path to a `.css` file for custom styling. |
+
+### Topics (Remappable)
+| Topic Name | Type | Description |
+|------------|------|-------------|
+| `llm_stream` | `std_msgs/msg/String` | Input for text/markdown content. |
+| `web_image`  | `sensor_msgs/msg/Image` (video only) | Rendered frames. |
+
+---
+
+## 🎨 Nexus Aesthetic & Customization
+
+The package uses a "Nexus Style" aesthetic: cyan accents, terminal prefixes (`UPLINK >`), and typewriter animations.
+
+### Custom CSS
+You can override any style by providing a CSS file via the `override_css` parameter.
+Example `my_style.css`:
+```css
+:root {
+    --accent-color: #00ff41; /* Matrix Green */
+    --font-size: 24px;
+}
+```
+
+### FIFO Reconnection
+The `webvideo` node is designed to be "sticky". You can start and stop your consumer (e.g., `ffplay`) as many times as you like; the node will automatically detect the connection and resume frame delivery within 1 second.
 
 ---
 
