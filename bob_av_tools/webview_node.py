@@ -89,12 +89,12 @@ class WebviewNode(Node):
         )
         self.declare_parameter(
             'enable_chat',
-            False,
+            os.environ.get('WEBVIEW_ENABLE_CHAT', 'false').lower() == 'true',
             ParameterDescriptor(description='Enable interactive chat area')
         )
         self.declare_parameter(
             'override_css',
-            '',
+            os.environ.get('WEBVIEW_OVERRIDE_CSS', ''),
             ParameterDescriptor(description='Path to a custom .css file')
         )
 
@@ -220,8 +220,11 @@ class WebviewNode(Node):
 
 
 def main(args=None):
-    # Set Chromium flags via env var - reliable for both ros2 run and ros2 launch
-    flags = "--disable-gpu --no-sandbox --disable-software-rasterizer --single-process"
+    # Set Chromium flags via env var - reliable for both run and launch
+    flags = (
+        "--disable-gpu --no-sandbox "
+        "--disable-software-rasterizer --single-process"
+    )
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
         os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "") + " " + flags
     ).strip()

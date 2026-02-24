@@ -98,7 +98,7 @@ class WebRenderer(Node):
         )
         self.declare_parameter(
             'override_css',
-            '',
+            os.environ.get('WEBVIDEO_OVERRIDE_CSS', ''),
             ParameterDescriptor(description='Path to a custom .css file')
         )
 
@@ -295,8 +295,11 @@ class WebRenderer(Node):
 
 def main(args=None):
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    # Set Chromium flags via env var - reliable for both ros2 run and ros2 launch
-    flags = "--disable-gpu --no-sandbox --disable-software-rasterizer --single-process"
+    # Set Chromium flags via env var - reliable for both run and launch
+    flags = (
+        "--disable-gpu --no-sandbox "
+        "--disable-software-rasterizer --single-process"
+    )
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
         os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "") + " " + flags
     ).strip()
