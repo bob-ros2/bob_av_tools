@@ -10,8 +10,8 @@
     <style>
         /* MASTERMIND NEXUS THEME: INTERACTIVE BLOCK-BASED VERSION */
         :root {
-            --cyan-accent: #008b8b;
-            --cyan-glow: rgba(0, 139, 139, 0.4);
+            --accent-color: #008b8b;
+            --accent-glow: rgba(0, 139, 139, 0.4);
             --bg-dark: #0a0a0a;
             --text-gray: #dcdcdc;
             --text-dim: #bbb;
@@ -20,7 +20,7 @@
             --root-padding: 20px;
             --content-padding: 20px;
             --content-bg: rgba(0, 0, 0, 0.3);
-            --content-border-left: 2px solid var(--cyan-accent);
+            --content-border-left: 2px solid var(--accent-color);
             --chat-bg: rgba(10, 10, 10, 0.8);
             --chat-border: 1px solid #222;
         }
@@ -90,7 +90,7 @@
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--cyan-accent);
+            background: var(--accent-color);
         }
 
         /* CHAT INPUT AREA */
@@ -100,7 +100,7 @@
             padding: 10px;
             background: var(--chat-bg);
             border: var(--chat-border);
-            border-left: 2px solid var(--cyan-accent);
+            border-left: 2px solid var(--accent-color);
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
             align-items: flex-end;
             gap: 10px;
@@ -110,7 +110,7 @@
             flex: 1;
             background: transparent;
             border: none;
-            color: var(--cyan-accent);
+            color: var(--accent-color);
             font-family: inherit;
             font-size: 1rem;
             resize: none;
@@ -129,7 +129,7 @@
         #send-btn {
             background: transparent;
             border: 1px solid #333;
-            color: var(--cyan-accent);
+            color: var(--accent-color);
             cursor: pointer;
             padding: 8px 15px;
             font-family: inherit;
@@ -143,9 +143,9 @@
         }
 
         #send-btn:hover {
-            border-color: var(--cyan-accent);
+            border-color: var(--accent-color);
             background: rgba(0, 139, 139, 0.1);
-            box-shadow: 0 0 10px var(--cyan-glow);
+            box-shadow: 0 0 10px var(--accent-glow);
         }
 
         #send-btn svg {
@@ -160,8 +160,8 @@
             padding: 12px 20px;
             background: rgba(0, 139, 139, 0.05);
             border: 1px solid rgba(0, 139, 139, 0.2);
-            border-left: 4px solid var(--cyan-accent);
-            color: var(--cyan-accent);
+            border-left: 4px solid var(--accent-color);
+            color: var(--accent-color);
             font-size: 0.95rem;
             position: relative;
         }
@@ -177,12 +177,12 @@
         #content-area h1,
         #content-area h2,
         #content-area h3 {
-            color: var(--cyan-accent);
+            color: var(--accent-color);
             text-transform: uppercase;
             letter-spacing: 2px;
             margin-top: 1.5rem;
             margin-bottom: 1rem;
-            text-shadow: 0 0 5px var(--cyan-accent);
+            text-shadow: 0 0 5px var(--accent-color);
         }
 
         #content-area p {
@@ -210,7 +210,7 @@
             display: inline-block;
             width: 10px;
             height: 1.2rem;
-            background-color: var(--cyan-accent);
+            background-color: var(--accent-color);
             margin-left: 8px;
             vertical-align: middle;
             animation: blinker 0.8s step-end infinite;
