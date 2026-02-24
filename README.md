@@ -39,7 +39,7 @@ sudo apt update && sudo apt install -y \
 ## 🛠️ Node Documentation
 
 ### 1. Web Video Renderer (`webvideo`)
-Renders a localized HTML overlay (`overlay.html`) for LLM text streams. Optimized for embedding in video mixers.
+Renders a localized HTML overlay for LLM text streams. Optimized for embedding in video mixers.
 
 #### ROS API
 - **Subscribed Topics**:
@@ -50,6 +50,7 @@ Renders a localized HTML overlay (`overlay.html`) for LLM text streams. Optimize
 #### Configuration (Parameters & Env Vars)
 | Parameter | Env Var Equivalent | Default | Description |
 |-----------|--------------------|---------|-------------|
+| `ui_path` | `WEBVIDEO_UI_PATH` | `webvideo.html` | Path to the base HTML template. |
 | `width` | `WEBVIDEO_WIDTH` | `854` | Rendering width (px). |
 | `height` | `WEBVIDEO_HEIGHT` | `480` | Rendering height (px). |
 | `fps` | `WEBVIDEO_FPS` | `30.0` | Frames per second. |
@@ -71,6 +72,7 @@ Interactive window for human-in-the-loop interaction. Opens a GUI window on the 
 #### Configuration (Parameters & Env Vars)
 | Parameter | Env Var Equivalent | Default | Description |
 |-----------|--------------------|---------|-------------|
+| `ui_path` | `WEBVIEW_UI_PATH` | `webview.html` | Path to the base HTML template. |
 | `width` | `WEBVIEW_WIDTH` | `1024` | Window width (px). |
 | `height` | `WEBVIEW_HEIGHT` | `768` | Window height (px). |
 | `enable_chat` | `WEBVIEW_ENABLE_CHAT` | `false` | Enable/Disable chat input area. |

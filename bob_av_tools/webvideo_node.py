@@ -101,6 +101,11 @@ class WebRenderer(Node):
             os.environ.get('WEBVIDEO_OVERRIDE_CSS', ''),
             ParameterDescriptor(description='Path to a custom .css file')
         )
+        self.declare_parameter(
+            'ui_path',
+            os.environ.get('WEBVIDEO_UI_PATH', ''),
+            ParameterDescriptor(description='Path to a custom .html file')
+        )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
@@ -152,17 +157,24 @@ class WebRenderer(Node):
         self.view.setPage(self.page)
 
         # Load local HTML
-        try:
-            package_share_dir = get_package_share_directory('bob_av_tools')
-            html_path = Path(package_share_dir) / "overlay.html"
-        except (PackageNotFoundError, Exception):
-            # Fallback for local development/non-installed runs
-            html_path = Path(__file__).parent / "overlay.html"
-            if not html_path.exists():
-                html_path = Path(os.getcwd()) / "bob_av_tools" / "overlay.html"
+        self.ui_path = self.get_parameter('ui_path').value
+        if not self.ui_path:
+            try:
+                package_share_dir = get_package_share_directory('bob_av_tools')
+                html_path = Path(package_share_dir) / "webvideo.html"
+            except (PackageNotFoundError, Exception):
+                # Fallback for local development/non-installed runs
+                html_path = Path(__file__).parent / "webvideo.html"
+                if not html_path.exists():
+                    html_path = (
+                        Path(os.getcwd()) / "bob_av_tools" / "webvideo.html"
+                    )
+            self.ui_path = str(html_path.absolute())
+        else:
+            self.ui_path = str(Path(self.ui_path).absolute())
 
-        self.get_logger().info(f"Loading UI from: {html_path}")
-        self.page.load(QUrl.fromLocalFile(str(html_path.absolute())))
+        self.get_logger().info(f"Loading UI from: {self.ui_path}")
+        self.page.load(QUrl.fromLocalFile(self.ui_path))
 
         # Connect injection once loaded
         self.page.loadFinished.connect(self._on_load_finished)

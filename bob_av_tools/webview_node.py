@@ -97,6 +97,11 @@ class WebviewNode(Node):
             os.environ.get('WEBVIEW_OVERRIDE_CSS', ''),
             ParameterDescriptor(description='Path to a custom .css file')
         )
+        self.declare_parameter(
+            'ui_path',
+            os.environ.get('WEBVIEW_UI_PATH', ''),
+            ParameterDescriptor(description='Path to a custom .html file')
+        )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
@@ -127,13 +132,19 @@ class WebviewNode(Node):
         self.bridge = Bridge(self)
 
         # Load local HTML
-        try:
-            package_share_dir = get_package_share_directory('bob_av_tools')
-            html_path = Path(package_share_dir) / "index.html"
-        except (PackageNotFoundError, Exception):
-            html_path = Path(__file__).parent / "index.html"
-            if not html_path.exists():
-                html_path = Path(os.getcwd()) / "bob_av_tools" / "index.html"
+        self.ui_path = self.get_parameter('ui_path').value
+        if not self.ui_path:
+            try:
+                package_share_dir = get_package_share_directory('bob_av_tools')
+                html_path = Path(package_share_dir) / "webview.html"
+            except (PackageNotFoundError, Exception):
+                html_path = Path(__file__).parent / "webview.html"
+                if not html_path.exists():
+                    html_path = Path(os.getcwd()) / "bob_av_tools" / "webview.html"
+            self.ui_path = str(html_path.absolute())
+        else:
+            # Respect absolute path or relative to CWD
+            self.ui_path = str(Path(self.ui_path).absolute())
 
         # Subscription
         self.subscription = self.create_subscription(
@@ -147,7 +158,7 @@ class WebviewNode(Node):
         self.chat_pub = self.create_publisher(String, 'chat_out', 10)
 
         # Load file with query param for chat state
-        url = QUrl.fromLocalFile(str(html_path.absolute()))
+        url = QUrl.fromLocalFile(self.ui_path)
         query_params = []
         if self.enable_chat:
             query_params.append("chat=true")
@@ -155,7 +166,7 @@ class WebviewNode(Node):
             url.setQuery("&".join(query_params))
 
         self.get_logger().info(
-            f"Loading UI from: {html_path} (Chat: {self.enable_chat})"
+            f"Loading UI from: {self.ui_path} (Chat: {self.enable_chat})"
         )
         self.page.load(url)
 

@@ -19,8 +19,8 @@ ament_python_install_package(${PROJECT_NAME}
 # Install assets (HTML and Vendor libs) to the package directory
 # This allows the node to find them regardless of install location
 install(FILES
-  bob_av_tools/overlay.html
-  bob_av_tools/index.html
+  bob_av_tools/webvideo.html
+  bob_av_tools/webview.html
   DESTINATION share/${PROJECT_NAME}
 )
 
