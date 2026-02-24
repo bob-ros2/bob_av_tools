@@ -297,8 +297,7 @@ def main(args=None):
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
     # Set Chromium flags via env var - reliable for both run and launch
     flags = (
-        "--disable-gpu --no-sandbox "
-        "--disable-software-rasterizer --single-process"
+        "--disable-gpu --no-sandbox --disable-software-rasterizer"
     )
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
         os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "") + " " + flags

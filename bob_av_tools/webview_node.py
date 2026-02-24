@@ -222,8 +222,7 @@ class WebviewNode(Node):
 def main(args=None):
     # Set Chromium flags via env var - reliable for both run and launch
     flags = (
-        "--disable-gpu --no-sandbox "
-        "--disable-software-rasterizer --single-process"
+        "--disable-gpu --no-sandbox --disable-software-rasterizer"
     )
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
         os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "") + " " + flags
