@@ -15,6 +15,12 @@
       --bg-dark: #0a0a0a;
       --text-gray: #dcdcdc;
       --text-dim: #bbb;
+
+      /* Layout Customization */
+      --root-padding: 40px;
+      --content-padding: 20px;
+      --content-bg: rgba(0, 0, 0, 0.3);
+      --content-border-left: 2px solid var(--cyan-accent);
     }
 
     body {
@@ -50,8 +56,7 @@
       height: 100vh;
       width: 100vw;
       box-sizing: border-box;
-      padding: 40px;
-      /* Adjust padding for video framing */
+      padding: var(--root-padding);
     }
 
     /* ONLY THE CONTENT AREA STYLE */
@@ -60,11 +65,11 @@
       font-size: 1.3rem;
       /* Larger for video visibility */
       color: var(--text-dim);
-      padding: 20px;
+      padding: var(--content-padding);
       overflow-y: auto;
       scrollbar-width: none;
-      background: rgba(0, 0, 0, 0.3);
-      border-left: 2px solid var(--cyan-accent);
+      background: var(--content-bg);
+      border-left: var(--content-border-left);
     }
 
     #content-area::-webkit-scrollbar {

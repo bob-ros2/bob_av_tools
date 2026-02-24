@@ -184,7 +184,7 @@ class WebviewNode(Node):
                     js_inject = (
                         "const style = document.createElement('style');"
                         f"style.textContent = {repr(css_content)}; "
-                        "document.head.appendChild(style);"
+                        "document.head.insertAdjacentElement('beforeend', style);"
                     )
                     self.page.runJavaScript(js_inject)
                     self.get_logger().info(

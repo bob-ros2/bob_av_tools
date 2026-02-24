@@ -133,11 +133,22 @@ console.log('Page automation complete.');
 
 ### Custom Styling (`override_css`)
 Override the default "Nexus" look for `webvideo` and `webview`.
+
+#### Layout Variables
+You can override these in your `.css` file for precise layout control without worrying about CSS specificity of IDs:
+- `--root-padding`: Padding of the outer container (default: `40px` for overlay, `20px` for webview).
+- `--content-padding`: Padding inside the terminal/content area (default: `20px`).
+- `--content-bg`: Background color/alpha of the content area.
+- `--content-border-left`: Style of the left accent border.
+- `--chat-bg`: (Webview only) Background of the chat input area.
+
+**Example:**
 ```css
 :root {
     --accent-color: #ff00ff; /* Cyberpink */
-    --bg-color: rgba(10, 0, 10, 0.9);
-    --font-family: 'Courier New', monospace;
+    --root-padding: 0px;      /* Full screen capture */
+    --content-bg: transparent;
+    --content-border-left: none;
 }
 ```
 
