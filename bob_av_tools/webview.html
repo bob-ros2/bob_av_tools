@@ -23,6 +23,8 @@
             --content-border-left: 2px solid var(--accent-color);
             --chat-bg: rgba(10, 10, 10, 0.8);
             --chat-border: 1px solid #222;
+            --line-height: 1.4;
+            --cursor-display: inline-block;
         }
 
         body {
@@ -70,6 +72,7 @@
             padding: var(--content-padding);
             background: var(--content-bg);
             border-left: var(--content-border-left);
+            line-height: var(--line-height);
             overflow-y: auto;
             scrollbar-width: thin;
             scrollbar-color: #222 transparent;
@@ -207,7 +210,7 @@
 
         /* CURSOR */
         .cursor {
-            display: inline-block;
+            display: var(--cursor-display);
             width: 10px;
             height: 1.2rem;
             background-color: var(--accent-color);

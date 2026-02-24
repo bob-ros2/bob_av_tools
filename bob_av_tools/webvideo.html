@@ -17,10 +17,11 @@
       --text-dim: #bbb;
 
       /* Layout Customization */
-      --root-padding: 0px;
+      --root-padding: 20px;
       --content-padding: 20px;
       --content-bg: rgba(0, 0, 0, 0.3);
       --content-border-left: 2px solid var(--accent-color);
+      --line-height: 1.4;
     }
 
     body {
@@ -70,6 +71,7 @@
       scrollbar-width: none;
       background: var(--content-bg);
       border-left: var(--content-border-left);
+      line-height: var(--line-height);
     }
 
     #content-area::-webkit-scrollbar {
@@ -182,8 +184,8 @@
     window.updateContent = (newContent) => {
       try {
         if (window.marked) {
-          // Add cursor during streaming
-          contentArea.innerHTML = marked.parse(newContent) + '<span class="cursor"></span>';
+          // Passive feel: no cursor in video overlay unless manually styled
+          contentArea.innerHTML = marked.parse(newContent);
           // Instant scroll for reactive feel
           contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
         }

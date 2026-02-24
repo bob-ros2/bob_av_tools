@@ -142,6 +142,8 @@ You can override these in your `.css` file for precise layout control without wo
 - `--content-padding`: Padding inside the terminal/content area (default: `20px`).
 - `--content-bg`: Background color/alpha of the content area.
 - `--content-border-left`: Style of the left accent border.
+- `--line-height`: Line height in the content area (default: `1.4`).
+- `--cursor-display`: (Webview only) Toggle cursor visibility (default: `inline-block`, set to `none` to hide).
 - `--chat-bg`: (Webview only) Background of the chat input area.
 
 **Example:**
