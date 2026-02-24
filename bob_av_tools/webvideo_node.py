@@ -205,25 +205,30 @@ class WebRenderer(Node):
             pass  # No reader yet, will retry on next timer tick
 
     def _on_load_finished(self, success):
-        css_exists = (
-            self.override_css_path and
-            os.path.exists(self.override_css_path)
-        )
-        if success and css_exists:
-            try:
-                with open(self.override_css_path, 'r') as f:
-                    css_content = f.read()
-                js_inject = (
-                    "const style = document.createElement('style');"
-                    f"style.textContent = {repr(css_content)}; "
-                    "document.head.insertAdjacentElement('beforeend', style);"
+        if success:
+            css_exists = (
+                self.override_css_path and
+                os.path.exists(self.override_css_path)
+            )
+            if css_exists:
+                try:
+                    with open(self.override_css_path, 'r') as f:
+                        css_content = f.read()
+                    js_inject = (
+                        "const style = document.createElement('style');"
+                        f"style.textContent = {repr(css_content)}; "
+                        "document.head.insertAdjacentElement('beforeend', style);"
+                    )
+                    self.page.runJavaScript(js_inject)
+                    self.get_logger().info(
+                        f"Injected custom CSS from: {self.override_css_path}"
+                    )
+                except Exception as e:
+                    self.get_logger().error(f"Failed to load CSS: {e}")
+            elif self.override_css_path:
+                self.get_logger().warning(
+                    f"CSS file not found: {self.override_css_path}"
                 )
-                self.page.runJavaScript(js_inject)
-                self.get_logger().info(
-                    f"Injected custom CSS from: {self.override_css_path}"
-                )
-            except Exception as e:
-                self.get_logger().error(f"Failed to load CSS: {e}")
 
     def listener_callback(self, msg):
         with self.lock:

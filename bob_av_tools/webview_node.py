@@ -203,6 +203,10 @@ class WebviewNode(Node):
                     )
                 except Exception as e:
                     self.get_logger().error(f"Failed to load CSS: {e}")
+            elif self.override_css_path:
+                self.get_logger().warning(
+                    f"CSS file not found: {self.override_css_path}"
+                )
 
     def listener_callback(self, msg):
         # We now send data chunks. The JS side will handle the accumulation
