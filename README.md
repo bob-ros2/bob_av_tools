@@ -5,121 +5,161 @@
 
 A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package provides high-fidelity web-based video rendering, interactive terminal overlays, and robust FIFO stream orchestration.
 
+---
+
 ## 🚀 Key Features
 
-- **`webvideo` Node**: Renders an offscreen browser overlay with auto-reconnecting FIFO output (BGRA raw) or ROS Image topics.
-- **`webview` Node**: Interactive sibling of `webvideo` that opens a GUI window, supporting interactive chat and live stream display.
-- **`webscreen` Node**: Renders **any URL** offscreen and streams it to FIFO/ROS Image.
-- **`write_fifo.sh`**: Helper script to pipe any stdin stream (e.g., from FFmpeg) into a managed FIFO.
-- **Robust FIFO Reconnect**: Advanced producer/consumer handling (`O_NONBLOCK` + `fcntl`) allowing seamless connection/disconnection.
-- **Offline Aesthetic**: Pre-bundled Markdown rendering and "Nexus Style" design.
+- **`webvideo`**: Offscreen browser renderer for overlays. Output: FIFO (raw BGRA) or ROS Image.
+- **`webview`**: Interactive GUI terminal sibling with chat support ("Uplink Echo").
+- **`webscreen`**: Capture **any URL** (website/local) offscreen. Supports authentications & automation.
+- **`write_fifo.sh`**: Helper script to pipe external streams (FFmpeg, etc.) into a managed FIFO.
+- **Robust FIFO Reconnect**: Advanced producer/consumer handling (`O_NONBLOCK` + `fcntl`) for seamless hot-swapping of readers.
+- **Nexus Aesthetic**: Built-in "Nexus Style" UI: Cyberspace/Terminal design with typewriter effects.
 
 ---
 
-## 🛠️ Usage & ROS API
+## 📦 Installation
+
+### 1. Python Dependencies
+```bash
+pip install PySide6 numpy
+```
+
+### 2. System Requirements (QtWebEngine/Chromium)
+The renderer requires several X11 and GL libraries for offscreen rendering:
+```bash
+sudo apt update && sudo apt install -y \
+    libxcb-cursor0 libgbm1 libnss3 libasound2 libxcomposite1 \
+    libxdamage1 libxrandr2 libxcb-icccm4 libxcb-image0 \
+    libxcb-keysyms1 libxcb-render-util0 libgl1 libegl1
+```
+
+---
+
+## 🛠️ Node Documentation
 
 ### 1. Web Video Renderer (`webvideo`)
-Renders a localized HTML overlay for LLM streams.
+Renders a localized HTML overlay (`overlay.html`) for LLM text streams. Optimized for embedding in video mixers.
 
 #### ROS API
 - **Subscribed Topics**:
-  - `llm_stream` (`std_msgs/msg/String`): Incoming text/markdown chunks to display.
+  - `llm_stream` (`std_msgs/msg/String`): Incoming text chunks.
 - **Published Topics**:
-  - `web_image` (`sensor_msgs/msg/Image`): Rendered frames (if `cv_bridge` is installed).
-- **Parameters**:
-  - `width` (int, default: 854): Rendering width.
-  - `height` (int, default: 480): Rendering height.
-  - `fps` (float, default: 30.0): Capture rate.
-  - `fifo_path` (string, default: `/tmp/web_fifo`): Target FIFO path.
-  - `override_css` (string, default: `''`): Path to custom CSS file.
+  - `web_image` (`sensor_msgs/msg/Image`): Rendered frames (Requires `cv_bridge`).
+
+#### Configuration (Parameters & Env Vars)
+| Parameter | Env Var Equivalent | Default | Description |
+|-----------|--------------------|---------|-------------|
+| `width` | `WEBVIDEO_WIDTH` | `854` | Rendering width (px). |
+| `height` | `WEBVIDEO_HEIGHT` | `480` | Rendering height (px). |
+| `fps` | `WEBVIDEO_FPS` | `30.0` | Frames per second. |
+| `fifo_path` | `WEBVIDEO_FIFO_PATH` | `/tmp/web_fifo` | Path to output raw BGRA pipe. |
+| `queue_length`| `WEBVIDEO_QUEUE_LENGTH`| `1000` | Subscription queue size. |
+| `override_css`| `WEBVIDEO_OVERRIDE_CSS`| `''` | Path to a custom .css file. |
 
 ---
 
 ### 2. Webview Terminal (`webview`)
-Interactive window for human-in-the-loop chat and terminal output.
+Interactive window for human-in-the-loop interaction. Opens a GUI window on the primary display.
 
 #### ROS API
 - **Subscribed Topics**:
-  - `llm_stream` (`std_msgs/msg/String`): Feed for the terminal area.
+  - `llm_stream` (`std_msgs/msg/String`): Feed for the terminal display.
 - **Published Topics**:
-  - `chat_out` (`std_msgs/msg/String`): User input from the chat box.
-- **Parameters**:
-  - `width` (int, default: 1024): Window width.
-  - `height` (int, default: 768): Window height.
-  - `enable_chat` (bool, default: false): Show/hide chat interface.
-  - `override_css` (string, default: `''`): Path to custom CSS file.
+  - `chat_out` (`std_msgs/msg/String`): Published when a user sends a message in the UI.
+
+#### Configuration (Parameters & Env Vars)
+| Parameter | Env Var Equivalent | Default | Description |
+|-----------|--------------------|---------|-------------|
+| `width` | `WEBVIEW_WIDTH` | `1024` | Window width (px). |
+| `height` | `WEBVIEW_HEIGHT` | `768` | Window height (px). |
+| `enable_chat` | `WEBVIEW_ENABLE_CHAT` | `false` | Enable/Disable chat input area. |
+| `queue_length`| `WEBVIEW_QUEUE_LENGTH`| `1000` | Subscription queue size. |
+| `override_css`| `WEBVIEW_OVERRIDE_CSS`| `''` | Path to a custom .css file. |
 
 ---
 
 ### 3. URL Screen Capture (`webscreen`)
-Offscreen render of any URL (website or local file).
+Renders any external URL or local file offscreen. Ideal for capturing Twitch chats, dashboards, or static web pages.
 
 #### ROS API
 - **Published Topics**:
-  - `webscreen_image` (`sensor_msgs/msg/Image`): Rendered frames.
-- **Parameters**:
-  - `url` (string, required): The URL to render.
-  - `width` (int, default: 1280): Viewport width.
-  - `height` (int, default: 720): Viewport height.
-  - `fps` (float, default: 30.0): Capture rate.
-  - `fifo_path` (string, default: `/tmp/webscreen_fifo`): Target FIFO path.
-  - `cookies_file` (string, default: `''`): Path to a JSON cookies file.
-  - `pre_script` (string, default: `''`): Path to a JS script to run on page load.
-  - `scroll_x` / `scroll_y` (int, default: 0): Initial scroll offset.
+  - `webscreen_image` (`sensor_msgs/msg/Image`): Captures views as ROS messages.
+
+#### Configuration (Parameters & Env Vars)
+| Parameter | Env Var Equivalent | Default | Description |
+|-----------|--------------------|---------|-------------|
+| `url` | `WEBSCREEN_URL` | `''` | **Required.** URL or `file://` path. |
+| `width` | `WEBSCREEN_WIDTH` | `1280` | Viewport width. |
+| `height` | `WEBSCREEN_HEIGHT` | `720` | Viewport height. |
+| `fps` | `WEBSCREEN_FPS` | `30.0` | Capture rate. |
+| `fifo_path` | `WEBSCREEN_FIFO_PATH`| `/tmp/webscreen_fifo` | Path to raw BGRA pipe. |
+| `cookies_file`| `WEBSCREEN_COOKIES_FILE`| `''` | Path to JSON cookies for auth. |
+| `pre_script` | `WEBSCREEN_PRE_SCRIPT` | `''` | Path to JS automation script. |
+| `scroll_x` | `WEBSCREEN_SCROLL_X` | `0` | Initial horizontal scroll. |
+| `scroll_y` | `WEBSCREEN_SCROLL_Y` | `0` | Initial vertical scroll. |
 
 ---
 
 ## 📂 Configuration Examples
 
-### Cookies JSON (`cookies_file`)
-Compatible with common browser export formats (e.g., EditThisCookie).
+### JSON Cookies (`cookies_file`)
+Required for websites with login (e.g., Twitch, Matrix). Use a browser extension to export cookies as JSON.
 ```json
 [
   {
-    "name": "session_id",
-    "value": "your_secure_token_here",
-    "domain": ".example.com",
+    "name": "session",
+    "value": "xyz123...",
+    "domain": ".twitch.tv",
     "path": "/",
     "secure": true,
-    "httpOnly": true
+    "httpOnly": true,
+    "expirationDate": 1771890000.5
   }
 ]
 ```
 
 ### Pre-Script JS (`pre_script`)
-Executed at `DeferredLoad` (DOM ready) to automate the page.
+Automate page actions (dismiss banners, focus elements, click buttons) before capture begins.
 ```javascript
-// Example: Hide a cookie banner and click a button
-document.querySelector('.banner-close').click();
-console.log('Banner dismissed');
+// Hide persistent cookie banners or ads
+const banner = document.querySelector('.cookie-consent');
+if (banner) banner.style.display = 'none';
+
+// Force dark mode if supported
+document.documentElement.setAttribute('data-theme', 'dark');
+console.log('Page automation complete.');
+```
+
+### Custom Styling (`override_css`)
+Override the default "Nexus" look for `webvideo` and `webview`.
+```css
+:root {
+    --accent-color: #ff00ff; /* Cyberpink */
+    --bg-color: rgba(10, 0, 10, 0.9);
+    --font-family: 'Courier New', monospace;
+}
 ```
 
 ---
 
-## 📜 Helper Scripts
+## 📜 Utility Scripts
 
 ### `write_fifo.sh`
-Used to pipe standard output into a FIFO that `bob_sdlviz` or other nodes can read from.
-
-**Example: Pipe FFmpeg into a FIFO**
+Orchestrates streams from external processes (like FFmpeg) into managed FIFOs.
 ```bash
-ffmpeg -i /dev/video0 -f rawvideo - | \
-  ros2 run bob_av_tools write_fifo.sh --path /tmp/camera_fifo
+# Capture webcam and pipe to FIFO for sdlviz
+ffmpeg -i /dev/video0 -f rawvideo -pixel_format bgr24 - | \
+  ros2 run bob_av_tools write_fifo.sh --path /tmp/cam_fifo
 ```
 
 ---
 
-## 📦 Installation
+## ⚙️ Advanced Configuration (Chromium Flags)
+The nodes automatically set `QTWEBENGINE_CHROMIUM_FLAGS` for headless compatibility. You can override these via the environment if needed:
 ```bash
-# Python dependencies
-pip install PySide6 numpy
-
-# System requirements (QtWebEngine)
-sudo apt update
-sudo apt install libxcb-cursor0 libgbm1 libnss3 libasound2 libxcomposite1 libxdamage1 libxrandr2 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libgl1 libegl1
+export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-setuid-sandbox --disable-gpu"
 ```
-
----
 
 ## ⚖️ License
 Apache-2.0
