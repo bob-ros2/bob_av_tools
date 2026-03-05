@@ -1,4 +1,4 @@
-# bob_av_tools
+# ROS Package [bob_av_tools](https://github.com/bob-ros2/bob_av_tools)
 
 [![CI – Build & Test](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml)
 [![Docker – Build & Push](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml)
@@ -7,7 +7,7 @@ A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 - **`webvideo`**: Offscreen browser renderer for overlays. Output: FIFO (raw BGRA) or ROS Image.
 - **`webview`**: Interactive GUI terminal sibling with chat support ("Uplink Echo").
@@ -18,7 +18,7 @@ A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### 1. Python Dependencies
 ```bash
@@ -36,7 +36,7 @@ sudo apt update && sudo apt install -y \
 
 ---
 
-## 🛠️ Node Documentation
+## Node Documentation
 
 ### 1. Web Video Renderer (`webvideo`)
 Renders a localized HTML overlay for LLM text streams. Optimized for embedding in video mixers.
@@ -103,7 +103,7 @@ Renders any external URL or local file offscreen. Ideal for capturing Twitch cha
 
 ---
 
-## 📂 Configuration Examples
+## Configuration Examples
 
 ### JSON Cookies (`cookies_file`)
 Required for websites with login (e.g., Twitch, Matrix). Use a browser extension to export cookies as JSON.
@@ -158,7 +158,7 @@ You can override these in your `.css` file for precise layout control without wo
 
 ---
 
-## 📜 Utility Scripts
+## Utility Scripts
 
 ### `write_fifo.sh`
 Orchestrates streams from external processes (like FFmpeg) into managed FIFOs.
@@ -170,11 +170,11 @@ ffmpeg -i /dev/video0 -f rawvideo -pixel_format bgr24 - | \
 
 ---
 
-## ⚙️ Advanced Configuration (Chromium Flags)
+## Advanced Configuration (Chromium Flags)
 The nodes automatically set `QTWEBENGINE_CHROMIUM_FLAGS` for headless compatibility. You can override these via the environment if needed:
 ```bash
 export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-setuid-sandbox --disable-gpu"
 ```
 
-## ⚖️ License
+## License
 Apache-2.0
