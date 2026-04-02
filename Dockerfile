@@ -23,6 +23,8 @@ RUN apt-get update && apt-get install -y \
     libxcb-render-util0 \
     libgl1 \
     libegl1 \
+    libxkbfile1 \
+    libxkbcommon-x11-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps
