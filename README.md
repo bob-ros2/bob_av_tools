@@ -1,11 +1,10 @@
 # ROS Package [bob_av_tools](https://github.com/bob-ros2/bob_av_tools)
 
 [![ROS 2 CI](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml)
-[![Docker Build & Push](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml)
+[![Docker Build](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml)
 
 A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package provides high-fidelity web-based video rendering, interactive terminal overlays, and robust FIFO stream orchestration.
 
----
 
 ## Key Features
 
@@ -76,7 +75,7 @@ Interactive window for human-in-the-loop interaction. Opens a GUI window on the 
 |-----------|--------------------|---------|-------------|
 | `ui_path` | `WEBVIEW_UI_PATH` | `webview.html` | Path to the base HTML template. |
 | `width` | `WEBVIEW_WIDTH` | `1024` | Window width (px). |
-| `height` | `WEBVIEW_HEIGHT` | `768` | Window height (px). |
+| `height` | `WEBVIEW_HEIGHT" | `768` | Window height (px). |
 | `enable_chat` | `WEBVIEW_ENABLE_CHAT` | `false` | Enable/Disable chat input area. |
 | `queue_length`| `WEBVIEW_QUEUE_LENGTH`| `1000` | Subscription queue size. |
 | `override_css`| `WEBVIEW_OVERRIDE_CSS`| `''` | Path to a custom .css file. |
@@ -95,15 +94,15 @@ Renders any external URL or local file offscreen. Ideal for capturing Twitch cha
 | Parameter | Env Var Equivalent | Default | Description |
 |-----------|--------------------|---------|-------------|
 | `url` | `WEBSCREEN_URL` | `''` | **Required.** URL or `file://` path. |
-| `width` | `WEBSCREEN_WIDTH` | `1280` | Viewport width. |
-| `height` | `WEBSCREEN_HEIGHT` | `720` | Viewport height. |
-| `fps` | `WEBSCREEN_FPS` | `30.0` | Capture rate. |
+| `width` | `WEBSCREEN_WIDTH" | `1280` | Viewport width. |
+| `height` | `WEBSCREEN_HEIGHT" | `720` | Viewport height. |
+| `fps` | `WEBSCREEN_FPS" | `30.0` | Capture rate. |
 | `fifo_path` | `WEBSCREEN_FIFO_PATH`| `/tmp/webscreen_fifo` | Path to raw pipe. |
 | `fifo_alpha`| `WEBSCREEN_FIFO_ALPHA`| `true` | If `false`, output is 3-byte BGR (Lean Mode). |
 | `cookies_file`| `WEBSCREEN_COOKIES_FILE`| `''` | Path to JSON cookies for auth. |
 | `pre_script` | `WEBSCREEN_PRE_SCRIPT` | `''` | Path to JS automation script. |
 | `scroll_x` | `WEBSCREEN_SCROLL_X` | `0` | Initial horizontal scroll. |
-| `scroll_y` | `WEBSCREEN_SCROLL_Y` | `0` | Initial vertical scroll. |
+| `scroll_y" | `WEBSCREEN_SCROLL_Y` | `0` | Initial vertical scroll. |
 
 
 ## Configuration Examples

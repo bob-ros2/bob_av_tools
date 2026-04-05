@@ -154,6 +154,13 @@ class WebviewNode(Node):
             self.queue_length
         )
 
+        self.tool_sub = self.create_subscription(
+            String,
+            'llm_tool_calls',
+            self.tool_callback,
+            self.queue_length
+        )
+
         # Publisher for Chat
         self.chat_pub = self.create_publisher(String, 'chat_out', 10)
 
@@ -216,6 +223,27 @@ class WebviewNode(Node):
             f"window.appendStream({repr(msg.data)});"
         )
         self.page.runJavaScript(js_code)
+
+    def tool_callback(self, msg):
+        try:
+            import json
+            try:
+                data = json.loads(msg.data)
+                name = data.get('name', 'unknown')
+                args = data.get('arguments', '{}')
+                # Format as a clean block name(args) with minimal spacing for stacking
+                tool_msg = f"\n```json\n{name}({args})\n```\n"
+            except (json.JSONDecodeError, TypeError, ValueError):
+                # Fallback for non-JSON tool messages
+                tool_msg = f"\n```\nTOOL: {msg.data}\n```\n"
+
+            js_code = (
+                "if(window.appendStream) "
+                f"window.appendStream({repr(tool_msg)});"
+            )
+            self.page.runJavaScript(js_code)
+        except Exception as e:
+            self.get_logger().error(f"Failed to process tool call: {e}")
 
     def run(self):
         # Handle Ctrl+C properly in Qt

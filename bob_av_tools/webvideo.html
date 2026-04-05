@@ -7,6 +7,8 @@
   <title>BOB NEXUS | OVERLAY</title>
   <!-- Using local libraries for offline high-fidelity rendering -->
   <script src="vendor/marked.min.js"></script>
+  <link rel="stylesheet" href="vendor/atom-one-dark.min.css">
+  <script src="vendor/highlight.min.js"></script>
   <style>
     /* MASTERMIND NEXUS THEME: UNDERGROUND / HACKER SZENE */
     :root {
@@ -124,11 +126,31 @@
     }
 
     #content-area code {
-      background: #1a1a1a;
-      color: #ff8c00;
-      padding: 2px 6px;
-      font-size: 1.1rem;
-      border-radius: 3px;
+      background: transparent;
+      padding: 0;
+      font-size: 1rem;
+      border-radius: 0;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* Ensure hljs theme background doesn't override our terminal black */
+    .hljs { 
+        background: transparent !important; 
+        padding: 0 !important;
+    }
+
+    .inline-code-block {
+        display: block;
+        width: 100%;
+        background: #121212;
+        margin: 0.8rem 0;
+        padding: 6px 10px;
+        border: none;
+        border-radius: 0;
+    }
+
+    .inline-code-block code {
+        color: inherit;
     }
 
     #content-area table {
@@ -167,6 +189,17 @@
         opacity: 0;
       }
     }
+
+    #content-area pre {
+      background: #121212;
+      border: none;
+      padding: 10px;
+      margin: 0;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      border-radius: 0;
+    }
   </style>
 </head>
 
@@ -179,7 +212,54 @@
   </div>
 
   <script>
-    const contentArea = document.getElementById('content-area');
+    // --- MARKED RENDERER CONFIG ---
+    const renderer = new marked.Renderer();
+    
+    // Helper to extract text from whatever marked sends (string or token)
+    const getVal = (val, field) => {
+        if (!val) return "";
+        if (typeof val === 'string') return val;
+        if (typeof val === 'object') return val[field] || val.text || val.raw || JSON.stringify(val);
+        return String(val);
+    };
+
+    // 1. Block-Highlighting (Safe Version)
+    renderer.code = function(a, b) {
+        const codeVal = getVal(a, 'text');
+        const langVal = getVal(b, 'lang');
+        
+        let highlighted = codeVal;
+        let language = null;
+        
+        if (window.hljs) {
+            try {
+                language = (langVal && hljs.getLanguage(langVal)) ? langVal : null;
+                highlighted = language 
+                    ? hljs.highlight(codeVal, { language }).value 
+                    : hljs.highlightAuto(codeVal).value;
+            } catch (e) { highlighted = codeVal; }
+        }
+        return `<pre><code class="hljs ${language ? 'language-' + language : ''}">${highlighted}</code></pre>`;
+    };
+
+    // 2. Inline-Highlighting (Safe Version)
+    renderer.codespan = function(tokenOrText) {
+        const text = getVal(tokenOrText, 'text');
+        let highlighted = text;
+        if (window.hljs) {
+            try {
+                highlighted = hljs.highlightAuto(text).value;
+            } catch(e) {}
+        }
+        return `<div class="inline-code-block"><code class="hljs">${highlighted}</code></div>`;
+    };
+
+    marked.setOptions({ 
+        renderer: renderer,
+        gfm: true,
+        breaks: true
+    });
+    // ------------------------------
 
     window.updateContent = (newContent) => {
       try {

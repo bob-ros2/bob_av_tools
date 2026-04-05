@@ -5,28 +5,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BOB NEXUS | INTERACTIVE TERMINAL</title>
-    <!-- Using local libraries for offline high-fidelity rendering -->
     <script src="vendor/marked.min.js"></script>
     <link rel="stylesheet" href="vendor/atom-one-dark.min.css">
     <script src="vendor/highlight.min.js"></script>
     <style>
-        /* MASTERMIND NEXUS THEME: INTERACTIVE BLOCK-BASED VERSION */
+        /* MASTERMIND NEXUS THEME: ULTRA-COMPACT 320x240 VERSION */
         :root {
             --accent-color: #008b8b;
-            --accent-glow: rgba(0, 139, 139, 0.4);
+            --accent-glow: rgba(0, 139, 139, 0.3);
             --bg-dark: #0a0a0a;
             --text-gray: #dcdcdc;
             --text-dim: #bbb;
 
-            /* Layout Customization */
-            --root-padding: 20px;
-            --content-padding: 20px;
-            --content-bg: rgba(0, 0, 0, 0.3);
-            --content-border-left: 2px solid var(--accent-color);
-            --chat-bg: rgba(10, 10, 10, 0.8);
-            --chat-border: 1px solid #222;
-            --line-height: 1.4;
-            --cursor-display: inline-block;
+            /* Minimal Layout for 320x240 */
+            --root-padding: 2px;
+            --content-padding: 3px;
+            --content-bg: rgba(0, 0, 0, 0.4);
+            --content-border-left: 1px solid var(--accent-color);
+            --chat-bg: rgba(12, 12, 12, 0.95);
+            --chat-border: 1px solid #333;
+            --line-height: 1.3;
         }
 
         body {
@@ -35,25 +33,21 @@
             font-family: 'Courier New', Courier, monospace;
             margin: 0;
             padding: 0;
-            line-height: 1.4;
-            background-image: radial-gradient(rgba(18, 18, 18, 0.75), rgba(0, 0, 0, 0.9));
+            line-height: var(--line-height);
+            background-image: radial-gradient(rgba(18, 18, 18, 0.8), rgba(0, 0, 0, 1));
             user-select: text;
-            overflow-x: hidden;
+            overflow: hidden; /* No body scroll, handled by content-area */
         }
 
-        /* SCANLINES EFFECT */
+        /* SUBTLE SCANLINES */
         body::before {
             content: " ";
             display: block;
             position: fixed;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
-                linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
             z-index: 9999;
-            background-size: 100% 3px, 3px 100%;
+            background-size: 100% 2px;
             pointer-events: none;
         }
 
@@ -69,46 +63,31 @@
         /* TERMINAL CONTENT AREA */
         #content-area {
             flex: 1;
-            font-size: 1.1rem;
+            font-size: 0.85rem; /* High-density */
             color: var(--text-dim);
-            padding: var(--content-padding);
+            padding: 3px 3px 3px 4px; /* +1px left gap */
             background: var(--content-bg);
             border-left: var(--content-border-left);
-            line-height: var(--line-height);
             overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: #222 transparent;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
         }
 
-        /* CUSTOM SCROLLBAR */
-        ::-webkit-scrollbar {
-            width: 6px;
+        /* HIDE SCROLLBARS */
+        #content-area::-webkit-scrollbar,
+        #chat-input::-webkit-scrollbar {
+            display: none;
         }
 
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #222;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-color);
-        }
-
-        /* CHAT INPUT AREA */
+        /* COMPACT CHAT INPUT AREA */
         #chat-container {
             display: none;
-            margin-top: 15px;
-            padding: 10px;
+            margin-top: 2px;
+            padding: 2px;
             background: var(--chat-bg);
             border: var(--chat-border);
-            border-left: 2px solid var(--accent-color);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            align-items: flex-end;
-            gap: 10px;
+            align-items: center;
+            gap: 3px;
         }
 
         #chat-input {
@@ -117,105 +96,85 @@
             border: none;
             color: var(--accent-color);
             font-family: inherit;
-            font-size: 1rem;
+            font-size: 0.8rem;
             resize: none;
-            padding: 10px;
+            padding: 5px;
             outline: none;
-            max-height: 150px;
-            overflow-y: auto;
+            max-height: 80px;
         }
 
         #chat-input::placeholder {
-            color: #333;
+            color: #444;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
         }
 
         #send-btn {
-            background: transparent;
+            background: rgba(0, 139, 139, 0.05);
             border: 1px solid #333;
             color: var(--accent-color);
             cursor: pointer;
-            padding: 8px 15px;
-            font-family: inherit;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: all 0.2s;
+            padding: 6px;
             display: flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            transition: all 0.2s;
+            border-radius: 2px;
         }
 
         #send-btn:hover {
             border-color: var(--accent-color);
-            background: rgba(0, 139, 139, 0.1);
-            box-shadow: 0 0 10px var(--accent-glow);
+            box-shadow: 0 0 8px var(--accent-glow);
         }
 
         #send-btn svg {
-            width: 14px;
-            height: 14px;
+            width: 16px; height: 16px;
             fill: currentColor;
         }
 
-        /* UPLINK ECHO STYLE */
+        /* COMPACT UPLINK ECHO */
         .uplink-echo {
-            margin: 1.5rem 0;
-            padding: 12px 20px;
+            margin: 0.8rem 0;
+            padding: 6px 10px;
             background: rgba(0, 139, 139, 0.05);
-            border: 1px solid rgba(0, 139, 139, 0.2);
-            border-left: 4px solid var(--accent-color);
             color: var(--accent-color);
-            font-size: 0.95rem;
-            position: relative;
+            font-size: 0.85rem;
         }
 
         .uplink-echo::before {
-            content: "UPLINK > ";
+            content: "> ";
             font-weight: 900;
-            letter-spacing: 2px;
-            opacity: 0.7;
         }
 
-        /* MARKDOWN STYLING */
-        #content-area h1,
-        #content-area h2,
-        #content-area h3 {
+        /* MARKDOWN STYLING - COMPACT */
+        #content-area h1, h2, h3 {
             color: var(--accent-color);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
-            text-shadow: 0 0 5px var(--accent-color);
+            font-size: 1.0rem;
+            margin: 0.8rem 0 0.4rem 0;
+            text-shadow: 0 0 3px var(--accent-color);
         }
 
-        #content-area p {
-            margin-bottom: 1.2rem;
-        }
+        #content-area p { margin-bottom: 0.6rem; }
 
         #content-area blockquote {
-            border-left: 4px solid #444;
-            margin: 1.5rem 0;
-            padding: 10px 20px;
+            border-left: 2px solid #555;
+            margin: 0.8rem 0;
+            padding: 5px 10px;
             color: #888;
-            font-style: italic;
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.01);
         }
 
         #content-area code {
             background: transparent;
             padding: 0;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             border-radius: 0;
             font-family: 'Courier New', Courier, monospace;
         }
 
-        /* Ensure hljs theme background doesn't override our terminal black */
-        .hljs { 
-            background: transparent !important; 
-            padding: 0 !important;
-        }
+        /* Base colors handled by the theme (atom-one-dark.min.css) */
+        /* We only need small overrides for our custom containers */
 
         .inline-code-block {
             display: block;
@@ -228,25 +187,10 @@
         }
 
         .inline-code-block code {
-            color: inherit;
+            padding: 0 !important;
+            background: transparent !important;
         }
 
-        /* CURSOR */
-        .cursor {
-            display: var(--cursor-display);
-            width: 10px;
-            height: 1.2rem;
-            background-color: var(--accent-color);
-            margin-left: 8px;
-            vertical-align: middle;
-            animation: blinker 0.8s step-end infinite;
-        }
-
-        @keyframes blinker {
-            50% {
-                opacity: 0;
-            }
-        }
 
         div.ai-response-block pre {
             background: #121212;
@@ -260,6 +204,18 @@
             box-sizing: border-box;
             border-radius: 0;
         }
+
+        /* Override theme padding for pre-nested code */
+        /* Ensure hljs theme background doesn't override our terminal black */
+        .hljs { 
+            background: transparent !important; 
+            padding: 0 !important;
+        }
+        div.ai-response-block pre code {
+            padding: 0 !important;
+            background: transparent !important;
+            font-family: 'Courier New', Courier, monospace;
+        }
     </style>
 </head>
 
@@ -270,9 +226,8 @@
         </div>
 
         <div id="chat-container">
-            <textarea id="chat-input" rows="1" placeholder="UPLINK COMMAND..."></textarea>
+            <textarea id="chat-input" rows="1" placeholder="UPLINK..."></textarea>
             <button id="send-btn">
-                <span>SEND</span>
                 <svg viewBox="0 0 24 24">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
@@ -295,12 +250,6 @@
         if (urlParams.get('chat') === 'true') {
             chatContainer.style.display = 'flex';
         }
-
-        // Auto-resize textarea
-        chatInput.addEventListener('input', () => {
-            chatInput.style.height = 'auto';
-            chatInput.style.height = chatInput.scrollHeight + 'px';
-        });
 
         // --- MARKED RENDERER CONFIG ---
         const renderer = new marked.Renderer();
@@ -344,12 +293,19 @@
             return `<div class="inline-code-block"><code class="hljs">${highlighted}</code></div>`;
         };
 
+        // Apply fallback options
         marked.setOptions({ 
             renderer: renderer,
             gfm: true,
             breaks: true
         });
         // ------------------------------
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = chatInput.scrollHeight + 'px';
+        });
 
         const createAIBlock = () => {
             const div = document.createElement('div');
@@ -363,11 +319,7 @@
         createAIBlock();
 
         const addCursor = () => {
-            const oldCursor = document.querySelector('.cursor');
-            if (oldCursor) oldCursor.remove();
-            const cursor = document.createElement('span');
-            cursor.className = 'cursor';
-            contentArea.appendChild(cursor);
+            // Cursor removed as requested
         };
 
         const submitChat = () => {
@@ -421,8 +373,17 @@
         window.appendStream = (chunk) => {
             if (!currentAIBlock) createAIBlock();
             currentContent += chunk;
-            try {
-                if (window.marked) {
+            renderAll();
+        };
+
+        window.updateContent = (fullText) => {
+            currentContent = fullText;
+            renderAll();
+        };
+
+        const renderAll = () => {
+             try {
+                if (window.marked && currentAIBlock) {
                     currentAIBlock.innerHTML = marked.parse(currentContent);
                     addCursor();
                     if (autoScroll) {
@@ -432,7 +393,7 @@
             } catch (e) {
                 console.error("Render Error:", e);
             }
-        };
+        }
     </script>
 </body>
 
