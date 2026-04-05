@@ -1,4 +1,4 @@
-name: CI – Build & Test
+name: ROS 2 CI
 
 on:
   push:
