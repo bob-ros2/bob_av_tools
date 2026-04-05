@@ -1,7 +1,7 @@
 # ROS Package [bob_av_tools](https://github.com/bob-ros2/bob_av_tools)
 
-[![CI – Build & Test](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml)
-[![Docker – Build & Push](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml)
+[![ROS 2 CI](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/ci.yml)
+[![Docker Build & Push](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml/badge.svg)](https://github.com/bob-ros2/bob_av_tools/actions/workflows/docker.yml)
 
 A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package provides high-fidelity web-based video rendering, interactive terminal overlays, and robust FIFO stream orchestration.
 
@@ -16,7 +16,6 @@ A collection of audio-visual utilities for the Bob ROS 2 ecosystem. This package
 - **Robust FIFO Reconnect**: Advanced producer/consumer handling (`O_NONBLOCK` + `fcntl`) for seamless hot-swapping of readers.
 - **Nexus Aesthetic**: Built-in "Nexus Style" UI: Cyberspace/Terminal design with typewriter effects.
 
----
 
 ## Installation
 
@@ -34,7 +33,6 @@ sudo apt update && sudo apt install -y \
     libxcb-keysyms1 libxcb-render-util0 libgl1 libegl1
 ```
 
----
 
 ## Node Documentation
 
@@ -43,7 +41,8 @@ Renders a localized HTML overlay for LLM text streams. Optimized for embedding i
 
 #### ROS API
 - **Subscribed Topics**:
-  - `llm_stream` (`std_msgs/msg/String`): Incoming text chunks.
+  - `llm_stream` (`std_msgs/msg/String`): Incoming text chunks for display.
+  - `llm_tool_calls` (`std_msgs/msg/String`): Feed for visualized tool/agent actions.
 - **Published Topics**:
   - `web_image` (`sensor_msgs/msg/Image`): Rendered frames (Requires `cv_bridge`).
 
@@ -54,20 +53,23 @@ Renders a localized HTML overlay for LLM text streams. Optimized for embedding i
 | `width` | `WEBVIDEO_WIDTH` | `854` | Rendering width (px). |
 | `height` | `WEBVIDEO_HEIGHT` | `480` | Rendering height (px). |
 | `fps` | `WEBVIDEO_FPS` | `30.0` | Frames per second. |
-| `fifo_path` | `WEBVIDEO_FIFO_PATH` | `/tmp/web_fifo` | Path to output raw BGRA pipe. |
+| `fifo_path` | `WEBVIDEO_FIFO_PATH` | `/tmp/web_fifo` | Path to output raw pipe. |
+| `fifo_alpha`| `WEBVIDEO_FIFO_ALPHA`| `true` | If `false`, output is 3-byte BGR (Lean Mode). |
 | `queue_length`| `WEBVIDEO_QUEUE_LENGTH`| `1000` | Subscription queue size. |
 | `override_css`| `WEBVIDEO_OVERRIDE_CSS`| `''` | Path to a custom .css file. |
 
----
 
 ### 2. Webview Terminal (`webview`)
 Interactive window for human-in-the-loop interaction. Opens a GUI window on the primary display.
 
+
 #### ROS API
 - **Subscribed Topics**:
   - `llm_stream` (`std_msgs/msg/String`): Feed for the terminal display.
+  - `llm_tool_calls` (`std_msgs/msg/String`): Visualized agent tool calls.
 - **Published Topics**:
   - `chat_out` (`std_msgs/msg/String`): Published when a user sends a message in the UI.
+
 
 #### Configuration (Parameters & Env Vars)
 | Parameter | Env Var Equivalent | Default | Description |
@@ -79,12 +81,13 @@ Interactive window for human-in-the-loop interaction. Opens a GUI window on the 
 | `queue_length`| `WEBVIEW_QUEUE_LENGTH`| `1000` | Subscription queue size. |
 | `override_css`| `WEBVIEW_OVERRIDE_CSS`| `''` | Path to a custom .css file. |
 
----
 
 ### 3. URL Screen Capture (`webscreen`)
 Renders any external URL or local file offscreen. Ideal for capturing Twitch chats, dashboards, or static web pages.
 
 #### ROS API
+- **Subscribed Topics**:
+  - `llm_tool_calls` (`std_msgs/msg/String`): Overlay tool calls on top of the captured URL.
 - **Published Topics**:
   - `webscreen_image` (`sensor_msgs/msg/Image`): Captures views as ROS messages.
 
@@ -95,13 +98,13 @@ Renders any external URL or local file offscreen. Ideal for capturing Twitch cha
 | `width` | `WEBSCREEN_WIDTH` | `1280` | Viewport width. |
 | `height` | `WEBSCREEN_HEIGHT` | `720` | Viewport height. |
 | `fps` | `WEBSCREEN_FPS` | `30.0` | Capture rate. |
-| `fifo_path` | `WEBSCREEN_FIFO_PATH`| `/tmp/webscreen_fifo` | Path to raw BGRA pipe. |
+| `fifo_path` | `WEBSCREEN_FIFO_PATH`| `/tmp/webscreen_fifo` | Path to raw pipe. |
+| `fifo_alpha`| `WEBSCREEN_FIFO_ALPHA`| `true` | If `false`, output is 3-byte BGR (Lean Mode). |
 | `cookies_file`| `WEBSCREEN_COOKIES_FILE`| `''` | Path to JSON cookies for auth. |
 | `pre_script` | `WEBSCREEN_PRE_SCRIPT` | `''` | Path to JS automation script. |
 | `scroll_x` | `WEBSCREEN_SCROLL_X` | `0` | Initial horizontal scroll. |
 | `scroll_y` | `WEBSCREEN_SCROLL_Y` | `0` | Initial vertical scroll. |
 
----
 
 ## Configuration Examples
 
@@ -121,6 +124,7 @@ Required for websites with login (e.g., Twitch, Matrix). Use a browser extension
 ]
 ```
 
+
 ### Pre-Script JS (`pre_script`)
 Automate page actions (dismiss banners, focus elements, click buttons) before capture begins.
 ```javascript
@@ -135,6 +139,7 @@ console.log('Page automation complete.');
 
 ### Custom Styling (`override_css`)
 Override the default "Nexus" look for `webvideo` and `webview`.
+
 
 #### Layout Variables
 You can override these in your `.css` file for precise layout control without worrying about CSS specificity of IDs:
@@ -156,7 +161,6 @@ You can override these in your `.css` file for precise layout control without wo
 }
 ```
 
----
 
 ## Utility Scripts
 
@@ -168,13 +172,46 @@ ffmpeg -i /dev/video0 -f rawvideo -pixel_format bgr24 - | \
   ros2 run bob_av_tools write_fifo.sh --path /tmp/cam_fifo
 ```
 
----
 
 ## Advanced Configuration (Chromium Flags)
 The nodes automatically set `QTWEBENGINE_CHROMIUM_FLAGS` for headless compatibility. You can override these via the environment if needed:
 ```bash
 export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-setuid-sandbox --disable-gpu"
 ```
+
+## HTML Templates & Custom Interactivity
+
+The renderer nodes (`webvideo`, `webview`, `webscreen`) communicate with the HTML templates via a standardized JavaScript bridge. If you provide a custom `ui_path`, your HTML should implement one of the following functions:
+
+### JS Bridge Interface
+```javascript
+/**
+ * Main update function called by the ROS node.
+ * @param {string} content - The full current markdown/text content.
+ */
+window.updateContent = function(content) {
+    // Render markdown, update terminal, etc.
+    document.body.innerText = content;
+};
+
+/**
+ * Alternative streaming interface.
+ * @param {string} chunk - New token/chunk to append.
+ */
+window.appendStream = function(chunk) {
+    document.body.innerText += chunk;
+};
+```
+
+### Provided Layouts
+- **`webvideo.html`**: Default full-screen overlay for text streams.
+- **`webview.html`**: Interactive terminal with chat input area.
+- **`smallchat.html`**: Compact, high-refresh rate overlay. Supports syntax highlighting via `highlight.js` (requires `vendor/` files).
+
+### Vendor Dependencies
+For offline use, required libraries are located in `bob_av_tools/vendor/`:
+- `highlight.min.js`: Syntax highlighting for code blocks.
+- `atom-one-dark.min.css`: Dark theme for highlighting.
 
 ## License
 Apache-2.0
