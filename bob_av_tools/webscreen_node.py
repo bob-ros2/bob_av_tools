@@ -24,6 +24,7 @@ import json
 import os
 import signal
 import sys
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +32,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 from rcl_interfaces.msg import ParameterDescriptor
 
 try:
@@ -114,6 +116,8 @@ class WebScreenNode(Node):
            'Horizontal scroll offset in pixels (Env: WEBSCREEN_SCROLL_X).')
         _p('scroll_y', int(os.environ.get('WEBSCREEN_SCROLL_Y', 0)),
            'Vertical scroll offset in pixels (Env: WEBSCREEN_SCROLL_Y).')
+        _p('fifo_alpha', True,
+           'Whether to include the alpha channel in the FIFO output.')
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
@@ -125,11 +129,21 @@ class WebScreenNode(Node):
         self.pre_script = self.get_parameter('pre_script').value or ''
         self.scroll_x = self.get_parameter('scroll_x').value
         self.scroll_y = self.get_parameter('scroll_y').value
+        self.fifo_alpha = self.get_parameter('fifo_alpha').value
 
         # ── ROS publisher ────────────────────────────────────────────────────
         self.publisher = self.create_publisher(
             Image, 'webscreen_image', self.queue_length)
         self.get_logger().info('Publishing frames to: webscreen_image')
+
+        # ── LLM Subscriptions ────────────────────────────────────────────────
+        self.current_content = ""
+        self.lock = threading.Lock()
+        self.llm_sub = self.create_subscription(
+            String, 'llm_stream', self.llm_callback, self.queue_length)
+        self.tool_sub = self.create_subscription(
+            String, 'llm_tool_calls', self.tool_callback, self.queue_length)
+
         if HAS_CV_BRIDGE:
             self.bridge = CvBridge()
 
@@ -268,7 +282,16 @@ class WebScreenNode(Node):
                 self.get_logger().error(f"Failed to publish image: {e}")
 
         if self.fifo_fd is not None:
-            data = image.constBits().tobytes()
+            if self.fifo_alpha:
+                # Standard 4-byte (BGRA) output
+                data = image.constBits().tobytes()
+            else:
+                # Strip alpha for efficient 3-byte (BGR) output
+                ptr = image.bits()
+                arr = np.frombuffer(ptr, dtype=np.uint8).reshape(
+                    (self.height, self.width, 4))
+                data = arr[:, :, :3].tobytes()
+
             try:
                 total = 0
                 while total < len(data):
@@ -291,6 +314,71 @@ class WebScreenNode(Node):
                     except OSError:
                         pass
                     self.fifo_fd = None
+
+    def llm_callback(self, msg):
+        """Handle incoming LLM stream data."""
+        with self.lock:
+            self.current_content += msg.data
+            self._update_web_content()
+
+    def tool_callback(self, msg):
+        """Handle incoming tool call notifications with clean functional format."""
+        try:
+            import json
+            try:
+                data = json.loads(msg.data)
+                name = data.get('name', 'unknown')
+                args = data.get('arguments', '{}')
+                # Format as a clean block name(args) with minimal spacing
+                tool_msg = f"\n```json\n{name}({args})\n```\n"
+            except (json.JSONDecodeError, TypeError, ValueError):
+                # Fallback for non-JSON
+                tool_msg = f"\n```\nTOOL: {msg.data}\n```\n"
+
+            with self.lock:
+                self.current_content += tool_msg
+                self._update_web_content()
+        except Exception as e:
+            self.get_logger().error(f"Failed to process tool call: {e}")
+
+    def _update_web_content(self):
+        """Inject the current content into the web page."""
+        # Try different possible interface functions used in Bob's AV tools
+        js_code = f"""
+        (function() {{
+            const content = {repr(self.current_content)};
+            if (window.updateContent) {{
+                window.updateContent(content);
+            }} else if (window.appendStream) {{
+                // Fallback: send accumulated content
+                window.appendStream(content);
+            }} else {{
+                // Fallback: create a simple overlay if none exists
+                let overlay = document.getElementById('bob-llm-overlay');
+                if (!overlay) {{
+                    overlay = document.createElement('div');
+                    overlay.id = 'bob-llm-overlay';
+                    overlay.style.position = 'fixed';
+                    overlay.style.bottom = '20px';
+                    overlay.style.right = '20px';
+                    overlay.style.width = '300px';
+                    overlay.style.maxHeight = '400px';
+                    overlay.style.background = 'rgba(0,0,0,0.7)';
+                    overlay.style.color = '#008b8b';
+                    overlay.style.padding = '15px';
+                    overlay.style.fontFamily = 'monospace';
+                    overlay.style.fontSize = '12px';
+                    overlay.style.overflowY = 'auto';
+                    overlay.style.borderLeft = '3px solid #008b8b';
+                    overlay.style.zIndex = '10000';
+                    document.body.appendChild(overlay);
+                }}
+                overlay.innerText = content;
+                overlay.scrollTop = overlay.scrollHeight;
+            }}
+        }})();
+        """
+        self.page.runJavaScript(js_code)
 
     def run(self):
         """Run the Qt + ROS event loop and return the exit code."""

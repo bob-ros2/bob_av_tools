@@ -106,6 +106,12 @@ class WebRenderer(Node):
             os.environ.get('WEBVIDEO_UI_PATH', ''),
             ParameterDescriptor(description='Path to a custom .html file')
         )
+        self.declare_parameter(
+            'fifo_alpha',
+            True,
+            ParameterDescriptor(
+                description='Whether to include the alpha channel in the FIFO output')
+        )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
@@ -113,6 +119,7 @@ class WebRenderer(Node):
         self.fifo_path = self.get_parameter('fifo_path').value
         self.queue_length = self.get_parameter('queue_length').value
         self.override_css_path = self.get_parameter('override_css').value
+        self.fifo_alpha = self.get_parameter('fifo_alpha').value
 
         # ROS Publishers & Subscriptions
         # Fixed topic name 'web_image', can be remapped
@@ -128,6 +135,13 @@ class WebRenderer(Node):
             String,
             'llm_stream',
             self.listener_callback,
+            self.queue_length
+        )
+
+        self.tool_sub = self.create_subscription(
+            String,
+            'llm_tool_calls',
+            self.tool_callback,
             self.queue_length
         )
 
@@ -233,13 +247,37 @@ class WebRenderer(Node):
     def listener_callback(self, msg):
         with self.lock:
             self.current_content += msg.data
-            js_code = (
-                "if(window.updateContent) "
-                "window.updateContent("
-                f"{repr(self.current_content)}"
-                ");"
-            )
-            self.page.runJavaScript(js_code)
+            self._update_web_content()
+
+    def tool_callback(self, msg):
+        try:
+            import json
+            try:
+                data = json.loads(msg.data)
+                name = data.get('name', 'unknown')
+                args = data.get('arguments', '{}')
+                # Format as a clean block name(args) with minimal spacing for stacking
+                tool_msg = f"\n```json\n{name}({args})\n```\n"
+            except (json.JSONDecodeError, TypeError, ValueError):
+                # Fallback for non-JSON
+                tool_msg = f"\n```\nTOOL: {msg.data}\n```\n"
+            with self.lock:
+                self.current_content += tool_msg
+                self._update_web_content()
+        except Exception as e:
+            self.get_logger().error(f"Failed to process tool call: {e}")
+
+    def _update_web_content(self):
+        content = self.current_content
+        js_code = (
+            f"const content = {repr(content)};"
+            "if (window.updateContent) {"
+            "  window.updateContent(content);"
+            "} else if (window.appendStream) {"
+            "  window.appendStream(content);"
+            "}"
+        )
+        self.page.runJavaScript(js_code)
 
     def capture_frame(self):
         image = QImage(self.width, self.height, QImage.Format_ARGB32)
@@ -270,7 +308,16 @@ class WebRenderer(Node):
 
         # 2. Write to FIFO if enabled
         if self.fifo_fd is not None:
-            data = image.constBits().tobytes()
+            if self.fifo_alpha:
+                # Standard 4-byte (BGRA) output
+                data = image.constBits().tobytes()
+            else:
+                # Efficiently strip alpha to get 3-byte (BGR) output
+                # We use the existing numpy bridge if possible, or create a view
+                buf = image.bits()
+                arr = np.frombuffer(buf, dtype=np.uint8).reshape(self.height, self.width, 4)
+                data = arr[:, :, :3].tobytes()
+
             try:
                 total_sent = 0
                 while total_sent < len(data):
