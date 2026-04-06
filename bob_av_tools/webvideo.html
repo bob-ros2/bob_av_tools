@@ -126,31 +126,19 @@
     }
 
     #content-area code {
-      background: transparent;
-      padding: 0;
+      background: #121212;
+      padding: 2px 4px;
       font-size: 1rem;
-      border-radius: 0;
+      border-radius: 2px;
       font-family: 'Courier New', Courier, monospace;
     }
 
-    /* Ensure hljs theme background doesn't override our terminal black */
-    .hljs { 
-        background: transparent !important; 
-        padding: 0 !important;
-    }
-
-    .inline-code-block {
+    /* Block code overrides */
+    #content-area pre code {
         display: block;
-        width: 100%;
-        background: #121212;
-        margin: 0.8rem 0;
-        padding: 6px 10px;
-        border: none;
+        background: transparent !important;
+        padding: 0 !important;
         border-radius: 0;
-    }
-
-    .inline-code-block code {
-        color: inherit;
     }
 
     #content-area table {
@@ -251,7 +239,7 @@
                 highlighted = hljs.highlightAuto(text).value;
             } catch(e) {}
         }
-        return `<div class="inline-code-block"><code class="hljs">${highlighted}</code></div>`;
+        return `<code class="hljs">${highlighted}</code>`;
     };
 
     marked.setOptions({ 

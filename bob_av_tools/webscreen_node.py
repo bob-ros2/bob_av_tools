@@ -397,14 +397,15 @@ class WebScreenNode(Node):
 
 def main(args=None):
     """Entry point for the webscreen node."""
-    os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-    flags = (
-        '--disable-gpu --no-sandbox '
-        '--disable-software-rasterizer'
-    )
-    os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = (
-        os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS', '') + ' ' + flags
-    ).strip()
+    if 'QT_QPA_PLATFORM' not in os.environ:
+        os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+
+    if 'QTWEBENGINE_CHROMIUM_FLAGS' not in os.environ:
+        flags = (
+            '--disable-gpu --no-sandbox '
+            '--disable-software-rasterizer'
+        )
+        os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = flags
 
     rclpy.init(args=args)
     node = WebScreenNode()

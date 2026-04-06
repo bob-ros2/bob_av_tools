@@ -269,13 +269,16 @@ class WebRenderer(Node):
 
     def _update_web_content(self):
         content = self.current_content
+        # Wrap in IIFE to avoid global variable redeclaration errors
         js_code = (
-            f"const content = {repr(content)};"
-            "if (window.updateContent) {"
-            "  window.updateContent(content);"
-            "} else if (window.appendStream) {"
-            "  window.appendStream(content);"
-            "}"
+            "(function() {"
+            f"  const content = {repr(content)};"
+            "  if (window.updateContent) {"
+            "    window.updateContent(content);"
+            "  } else if (window.appendStream) {"
+            "    window.appendStream(content);"
+            "  }"
+            "})();"
         )
         self.page.runJavaScript(js_code)
 
@@ -358,14 +361,15 @@ class WebRenderer(Node):
 
 
 def main(args=None):
-    os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    # Set Chromium flags via env var - reliable for both run and launch
-    flags = (
-        "--disable-gpu --no-sandbox --disable-software-rasterizer"
-    )
-    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
-        os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "") + " " + flags
-    ).strip()
+    # Only set defaults if not already provided by environment (e.g. Docker)
+    if "QT_QPA_PLATFORM" not in os.environ:
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+
+    # Chromium flags via env var
+    if "QTWEBENGINE_CHROMIUM_FLAGS" not in os.environ:
+        flags = "--disable-gpu --no-sandbox --disable-software-rasterizer"
+        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = flags
+
     rclpy.init(args=args)
 
     renderer = WebRenderer()

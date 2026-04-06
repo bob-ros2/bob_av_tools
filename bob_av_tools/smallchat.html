@@ -166,23 +166,21 @@
         }
 
         #content-area code {
-            background: transparent;
-            padding: 0;
-            font-size: 0.75rem;
-            border-radius: 0;
+            background: rgba(45, 45, 45, 0.95);
+            color: #fff;
+            padding: 2px 6px;
+            font-size: 0.85rem;
+            border-radius: 5px;
+            border: 1px solid #444;
             font-family: 'Courier New', Courier, monospace;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
-        /* Base colors handled by the theme (atom-one-dark.min.css) */
-        /* We only need small overrides for our custom containers */
-
-        .inline-code-block {
+        /* Block code overrides */
+        div.ai-response-block pre code {
             display: block;
-            width: 100%;
-            background: #121212;
-            margin: 0.8rem 0;
-            padding: 6px 10px;
-            border: none;
+            background: transparent !important;
+            padding: 0 !important;
             border-radius: 0;
         }
 
@@ -290,7 +288,7 @@
                     highlighted = hljs.highlightAuto(text).value;
                 } catch(e) {}
             }
-            return `<div class="inline-code-block"><code class="hljs">${highlighted}</code></div>`;
+            return `<code class="hljs">${highlighted}</code>`;
         };
 
         // Apply fallback options
