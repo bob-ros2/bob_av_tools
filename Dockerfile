@@ -42,6 +42,10 @@ RUN apt-get update && apt-get install -y \
     libxkbfile1 \
     libxkbcommon-x11-0 \
     libdbus-1-3 \
+    # International Fonts
+    fonts-noto-cjk \
+    fonts-noto-color-emoji \
+    fonts-noto-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps
