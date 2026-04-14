@@ -214,6 +214,55 @@
             background: transparent !important;
             font-family: 'Courier New', Courier, monospace;
         }
+
+        div.reasoning-block {
+            background: rgba(0, 50, 50, 0.4);
+            padding: 5px 8px;
+            margin: 5px 0;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-style: italic;
+            position: relative;
+            overflow: hidden; /* Prevent internal scrollbars */
+        }
+        div.reasoning-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+            font-style: normal;
+            font-weight: bold;
+        }
+        div.reasoning-header span {
+            font-size: 0.6rem;
+            letter-spacing: 1px;
+            color: var(--accent-color);
+        }
+        .collapse-btn {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            font-size: 0.65rem;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: normal;
+            border-radius: 2px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .collapse-btn:hover {
+            opacity: 1;
+        }
+        div.reasoning-block.collapsed .reasoning-content {
+            display: none;
+        }
+        .reasoning-content {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .reasoning-content::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
 
@@ -242,6 +291,8 @@
         let autoScroll = true;
         let currentAIBlock = null;
         let currentContent = "";
+        let currentReasoningBlock = null;
+        let currentReasoningContent = "";
 
         // Check query params for chat state
         const urlParams = new URLSearchParams(window.location.search);
@@ -311,6 +362,10 @@
             contentArea.appendChild(div);
             currentAIBlock = div;
             currentContent = ""; // Reset for new block
+
+            // Clear reasoning state for new turn
+            currentReasoningBlock = null;
+            currentReasoningContent = "";
         };
 
         // Initialize first block
@@ -372,6 +427,46 @@
             if (!currentAIBlock) createAIBlock();
             currentContent += chunk;
             renderAll();
+        };
+
+        window.appendReasoning = (chunk) => {
+            if (!currentReasoningBlock) {
+                currentReasoningBlock = document.createElement('div');
+                currentReasoningBlock.className = 'reasoning-block';
+                
+                const header = document.createElement('div');
+                header.className = 'reasoning-header';
+                header.innerHTML = `<span>THOUGHTS</span><button class="collapse-btn">▲</button>`;
+                
+                const btn = header.querySelector('.collapse-btn');
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    currentReasoningBlock.classList.toggle('collapsed');
+                    btn.innerText = currentReasoningBlock.classList.contains('collapsed') ? '▼' : '▲';
+                };
+                
+                const rContent = document.createElement('div');
+                rContent.className = 'reasoning-content';
+                
+                currentReasoningBlock.appendChild(header);
+                currentReasoningBlock.appendChild(rContent);
+
+                // Insert before current AI block if it exists
+                if (currentAIBlock) {
+                    contentArea.insertBefore(currentReasoningBlock, currentAIBlock);
+                } else {
+                    contentArea.appendChild(currentReasoningBlock);
+                }
+                currentReasoningContent = "";
+            }
+            currentReasoningContent += chunk;
+            if (window.marked && currentReasoningBlock) {
+                const rContent = currentReasoningBlock.querySelector('.reasoning-content');
+                rContent.innerHTML = marked.parse(currentReasoningContent);
+                if (autoScroll) {
+                    contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
+                }
+            }
         };
 
         window.updateContent = (fullText) => {

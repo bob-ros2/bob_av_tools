@@ -135,10 +135,10 @@
 
     /* Block code overrides */
     #content-area pre code {
-        display: block;
-        background: transparent !important;
-        padding: 0 !important;
-        border-radius: 0;
+      display: block;
+      background: transparent !important;
+      padding: 0 !important;
+      border-radius: 0;
     }
 
     #content-area table {
@@ -178,6 +178,52 @@
       }
     }
 
+    div.reasoning-block {
+      background: rgba(0, 50, 50, 0.4);
+      padding: 8px 12px;
+      margin: 10px 0;
+      font-size: 1rem;
+      color: var(--text-dim);
+      font-style: italic;
+      position: relative;
+    }
+
+    div.reasoning-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+      font-style: normal;
+      font-weight: bold;
+    }
+
+    div.reasoning-header span {
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      color: var(--accent-color);
+    }
+
+    .collapse-btn {
+      background: transparent;
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 0 5px;
+      line-height: normal;
+      border-radius: 2px;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+
+    .collapse-btn:hover {
+      opacity: 1;
+    }
+
+    div.reasoning-block.collapsed .reasoning-content {
+      display: none;
+    }
+
     #content-area pre {
       background: #121212;
       border: none;
@@ -202,65 +248,123 @@
   <script>
     // --- MARKED RENDERER CONFIG ---
     const renderer = new marked.Renderer();
-    
+
     // Helper to extract text from whatever marked sends (string or token)
     const getVal = (val, field) => {
-        if (!val) return "";
-        if (typeof val === 'string') return val;
-        if (typeof val === 'object') return val[field] || val.text || val.raw || JSON.stringify(val);
-        return String(val);
+      if (!val) return "";
+      if (typeof val === 'string') return val;
+      if (typeof val === 'object') return val[field] || val.text || val.raw || JSON.stringify(val);
+      return String(val);
     };
 
     // 1. Block-Highlighting (Safe Version)
-    renderer.code = function(a, b) {
-        const codeVal = getVal(a, 'text');
-        const langVal = getVal(b, 'lang');
-        
-        let highlighted = codeVal;
-        let language = null;
-        
-        if (window.hljs) {
-            try {
-                language = (langVal && hljs.getLanguage(langVal)) ? langVal : null;
-                highlighted = language 
-                    ? hljs.highlight(codeVal, { language }).value 
-                    : hljs.highlightAuto(codeVal).value;
-            } catch (e) { highlighted = codeVal; }
-        }
-        return `<pre><code class="hljs ${language ? 'language-' + language : ''}">${highlighted}</code></pre>`;
+    renderer.code = function (a, b) {
+      const codeVal = getVal(a, 'text');
+      const langVal = getVal(b, 'lang');
+
+      let highlighted = codeVal;
+      let language = null;
+
+      if (window.hljs) {
+        try {
+          language = (langVal && hljs.getLanguage(langVal)) ? langVal : null;
+          highlighted = language
+            ? hljs.highlight(codeVal, { language }).value
+            : hljs.highlightAuto(codeVal).value;
+        } catch (e) { highlighted = codeVal; }
+      }
+      return `<pre><code class="hljs ${language ? 'language-' + language : ''}">${highlighted}</code></pre>`;
     };
 
     // 2. Inline-Highlighting (Safe Version)
-    renderer.codespan = function(tokenOrText) {
-        const text = getVal(tokenOrText, 'text');
-        let highlighted = text;
-        if (window.hljs) {
-            try {
-                highlighted = hljs.highlightAuto(text).value;
-            } catch(e) {}
-        }
-        return `<code class="hljs">${highlighted}</code>`;
+    renderer.codespan = function (tokenOrText) {
+      const text = getVal(tokenOrText, 'text');
+      let highlighted = text;
+      if (window.hljs) {
+        try {
+          highlighted = hljs.highlightAuto(text).value;
+        } catch (e) { }
+      }
+      return `<code class="hljs">${highlighted}</code>`;
     };
 
-    marked.setOptions({ 
-        renderer: renderer,
-        gfm: true,
-        breaks: true
+    marked.setOptions({
+      renderer: renderer,
+      gfm: true,
+      breaks: true
     });
     // ------------------------------
 
-    window.updateContent = (newContent) => {
+    const contentArea = document.getElementById('content-area');
+    let currentContent = "";
+    let currentReasoning = "";
+    let isReasoningCollapsed = false;
+
+    window.toggleReasoning = () => {
+      isReasoningCollapsed = !isReasoningCollapsed;
+      renderAll();
+    };
+
+    const renderAll = () => {
       try {
-        if (window.marked) {
-          // Passive feel: no cursor in video overlay unless manually styled
-          contentArea.innerHTML = marked.parse(newContent);
-          // Instant scroll for reactive feel
-          contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
+        if (!window.marked) return;
+
+        let html = "";
+        if (currentReasoning) {
+          const collapsedClass = isReasoningCollapsed ? "collapsed" : "";
+          html += `
+            <div class="reasoning-block ${collapsedClass}">
+                <div class="reasoning-header">
+                    <span>THOUGHTS</span>
+                    <button class="collapse-btn" onclick="toggleReasoning()">
+                        ${isReasoningCollapsed ? '▼' : '▲'}
+                    </button>
+                </div>
+                <div class="reasoning-content">
+                    ${marked.parse(currentReasoning)}
+                </div>
+            </div>`;
         }
+        if (currentContent) {
+          html += marked.parse(currentContent);
+        }
+
+        contentArea.innerHTML = html;
+        contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
       } catch (e) {
         console.error("Render Error:", e);
       }
     };
+
+    window.updateContent = (newContent) => {
+      currentContent = newContent;
+      renderAll();
+    };
+
+    window.appendReasoning = (chunk) => {
+      currentReasoning += chunk;
+      renderAll();
+    };
+
+    // Reset reasoning when a new tool call or significant content update happens? 
+    // Actually typically reasoning is followed by content.
+    // If the node sends a full content update, we trust it.
+    // But we might want to clear reasoning when a new sequence starts.
+    // However, the current topic structure doesn't easily tell us when a new turn starts
+    // unless the server clears it. 
+    // For now, we'll just keep it until it's manually reset or new content comes?
+    // Usually if currentContent starts from scratch, we should clear reasoning.
+
+    const originalUpdateContent = window.updateContent;
+    window.updateContent = (newContent) => {
+      // Simple heuristic: if the new content is short and we had much more before, it's likely a reset
+      if (newContent.length < currentContent.length && newContent.length < 50) {
+        currentReasoning = "";
+      }
+      currentContent = newContent;
+      renderAll();
+    };
+
   </script>
 </body>
 

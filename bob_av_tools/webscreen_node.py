@@ -143,6 +143,8 @@ class WebScreenNode(Node):
             String, 'llm_stream', self.llm_callback, self.queue_length)
         self.tool_sub = self.create_subscription(
             String, 'llm_tool_calls', self.tool_callback, self.queue_length)
+        self.reasoning_sub = self.create_subscription(
+            String, 'llm_reasoning', self.reasoning_callback, self.queue_length)
 
         if HAS_CV_BRIDGE:
             self.bridge = CvBridge()
@@ -340,6 +342,14 @@ class WebScreenNode(Node):
                 self._update_web_content()
         except Exception as e:
             self.get_logger().error(f"Failed to process tool call: {e}")
+
+    def reasoning_callback(self, msg):
+        """Handle incoming reasoning data."""
+        js_code = (
+            "if(window.appendReasoning) "
+            f"window.appendReasoning({repr(msg.data)});"
+        )
+        self.page.runJavaScript(js_code)
 
     def _update_web_content(self):
         """Inject the current content into the web page."""
