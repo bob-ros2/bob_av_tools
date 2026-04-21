@@ -14,40 +14,42 @@
 
 import fcntl
 import os
+from pathlib import Path
 import signal
 import sys
 import threading
-from pathlib import Path
 
+from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import PackageNotFoundError
 import numpy as np
 
 # ROS 2 imports
+from rcl_interfaces.msg import ParameterDescriptor
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
-from rcl_interfaces.msg import ParameterDescriptor
-from ament_index_python.packages import (
-    get_package_share_directory,
-    PackageNotFoundError
-)
 
 # CV Bridge support
 try:
     from cv_bridge import CvBridge
+
     HAS_CV_BRIDGE = True
 except ImportError:
     HAS_CV_BRIDGE = False
 
 # Qt imports
 try:
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtCore import QPoint
+    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import QUrl
+    from PySide6.QtGui import QImage
+    from PySide6.QtGui import QPainter
     from PySide6.QtWebEngineCore import QWebEnginePage
     from PySide6.QtWebEngineWidgets import QWebEngineView
-    from PySide6.QtCore import QUrl, QTimer, QPoint
-    from PySide6.QtGui import QImage, QPainter
+    from PySide6.QtWidgets import QApplication
 except ImportError as e:
-    print(f"Error: {e}. Please install PySide6 with: pip install PySide6")
+    print(f'Error: {e}. Please install PySide6 with: pip install PySide6')
     sys.exit(1)
 
 
@@ -57,7 +59,7 @@ class CustomPage(QWebEnginePage):
         self.node = node
 
     def javaScriptConsoleMessage(self, level, message, line_id, source_id):
-        self.node.get_logger().info(f"[JS] {message} (line {line_id})")
+        self.node.get_logger().info(f'[JS] {message} (line {line_id})')
 
 
 class WebRenderer(Node):
@@ -66,51 +68,50 @@ class WebRenderer(Node):
 
         # Log ROS Domain for transparency
         domain_id = os.environ.get('ROS_DOMAIN_ID', '0 (default)')
-        self.get_logger().info(
-            f"Web Video Node starting on ROS_DOMAIN_ID: {domain_id}"
-        )
+        self.get_logger().info(f'Web Video Node starting on ROS_DOMAIN_ID: {domain_id}')
 
         # Parameters with Env-Var defaults and Descriptors
         self.declare_parameter(
             'width',
             int(os.environ.get('WEBVIDEO_WIDTH', 854)),
-            ParameterDescriptor(description='Rendering width in pixels')
+            ParameterDescriptor(description='Rendering width in pixels'),
         )
         self.declare_parameter(
             'height',
             int(os.environ.get('WEBVIDEO_HEIGHT', 480)),
-            ParameterDescriptor(description='Rendering height in pixels')
+            ParameterDescriptor(description='Rendering height in pixels'),
         )
         self.declare_parameter(
             'fps',
             float(os.environ.get('WEBVIDEO_FPS', 30.0)),
-            ParameterDescriptor(description='Frames per second for capture')
+            ParameterDescriptor(description='Frames per second for capture'),
         )
         self.declare_parameter(
             'fifo_path',
             os.environ.get('WEBVIDEO_FIFO_PATH', '/tmp/web_fifo'),
-            ParameterDescriptor(description='File path for the raw video FIFO')
+            ParameterDescriptor(description='File path for the raw video FIFO'),
         )
         self.declare_parameter(
             'queue_length',
             int(os.environ.get('WEBVIDEO_QUEUE_LENGTH', 1000)),
-            ParameterDescriptor(description='ROS subscription queue size')
+            ParameterDescriptor(description='ROS subscription queue size'),
         )
         self.declare_parameter(
             'override_css',
             os.environ.get('WEBVIDEO_OVERRIDE_CSS', ''),
-            ParameterDescriptor(description='Path to a custom .css file')
+            ParameterDescriptor(description='Path to a custom .css file'),
         )
         self.declare_parameter(
             'ui_path',
             os.environ.get('WEBVIDEO_UI_PATH', ''),
-            ParameterDescriptor(description='Path to a custom .html file')
+            ParameterDescriptor(description='Path to a custom .html file'),
         )
         self.declare_parameter(
             'fifo_alpha',
             True,
             ParameterDescriptor(
-                description='Whether to include the alpha channel in the FIFO output')
+                description='Whether to include the alpha channel in the FIFO output'
+            ),
         )
 
         self.width = self.get_parameter('width').value
@@ -127,29 +128,20 @@ class WebRenderer(Node):
         if HAS_CV_BRIDGE:
             self.image_pub = self.create_publisher(Image, 'web_image', 10)
             self.bridge = CvBridge()
-            self.get_logger().info("Publishing frames to: web_image")
+            self.get_logger().info('Publishing frames to: web_image')
         else:
-            self.get_logger().warn("CvBridge not found. No Image publisher.")
+            self.get_logger().warn('CvBridge not found. No Image publisher.')
 
         self.subscription = self.create_subscription(
-            String,
-            'llm_stream',
-            self.listener_callback,
-            self.queue_length
+            String, 'llm_stream', self.listener_callback, self.queue_length
         )
 
         self.tool_sub = self.create_subscription(
-            String,
-            'llm_tool_calls',
-            self.tool_callback,
-            self.queue_length
+            String, 'llm_tool_calls', self.tool_callback, self.queue_length
         )
 
         self.reasoning_sub = self.create_subscription(
-            String,
-            'llm_reasoning',
-            self.reasoning_callback,
-            self.queue_length
+            String, 'llm_reasoning', self.reasoning_callback, self.queue_length
         )
 
         # FIFO Setup (non-blocking, auto-reconnect)
@@ -158,11 +150,11 @@ class WebRenderer(Node):
             if not os.path.exists(self.fifo_path):
                 os.mkfifo(self.fifo_path)
             self.get_logger().info(
-                f"FIFO ready: {self.fifo_path} (waiting for reader...)"
+                f'FIFO ready: {self.fifo_path} (waiting for reader...)'
             )
 
         # Shared state
-        self.current_content = ""
+        self.current_content = ''
         self.lock = threading.Lock()
 
         # Initialize Qt Application
@@ -182,19 +174,17 @@ class WebRenderer(Node):
         if not self.ui_path:
             try:
                 package_share_dir = get_package_share_directory('bob_av_tools')
-                html_path = Path(package_share_dir) / "webvideo.html"
+                html_path = Path(package_share_dir) / 'webvideo.html'
             except (PackageNotFoundError, Exception):
                 # Fallback for local development/non-installed runs
-                html_path = Path(__file__).parent / "webvideo.html"
+                html_path = Path(__file__).parent / 'webvideo.html'
                 if not html_path.exists():
-                    html_path = (
-                        Path(os.getcwd()) / "bob_av_tools" / "webvideo.html"
-                    )
+                    html_path = Path(os.getcwd()) / 'bob_av_tools' / 'webvideo.html'
             self.ui_path = str(html_path.absolute())
         else:
             self.ui_path = str(Path(self.ui_path).absolute())
 
-        self.get_logger().info(f"Loading UI from: {self.ui_path}")
+        self.get_logger().info(f'Loading UI from: {self.ui_path}')
         self.page.load(QUrl.fromLocalFile(self.ui_path))
 
         # Connect injection once loaded
@@ -221,15 +211,14 @@ class WebRenderer(Node):
             flags = fcntl.fcntl(fd, fcntl.F_GETFL)
             fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
             self.fifo_fd = fd
-            self.get_logger().info("FIFO connected to reader.")
+            self.get_logger().info('FIFO connected to reader.')
         except OSError:
             pass  # No reader yet, will retry on next timer tick
 
     def _on_load_finished(self, success):
         if success:
-            css_exists = (
-                self.override_css_path and
-                os.path.exists(self.override_css_path)
+            css_exists = self.override_css_path and os.path.exists(
+                self.override_css_path
             )
             if css_exists:
                 try:
@@ -237,18 +226,18 @@ class WebRenderer(Node):
                         css_content = f.read()
                     js_inject = (
                         "const style = document.createElement('style');"
-                        f"style.textContent = {repr(css_content)}; "
+                        f'style.textContent = {repr(css_content)}; '
                         "document.head.insertAdjacentElement('beforeend', style);"
                     )
                     self.page.runJavaScript(js_inject)
                     self.get_logger().info(
-                        f"Injected custom CSS from: {self.override_css_path}"
+                        f'Injected custom CSS from: {self.override_css_path}'
                     )
                 except Exception as e:
-                    self.get_logger().error(f"Failed to load CSS: {e}")
+                    self.get_logger().error(f'Failed to load CSS: {e}')
             elif self.override_css_path:
                 self.get_logger().warning(
-                    f"CSS file not found: {self.override_css_path}"
+                    f'CSS file not found: {self.override_css_path}'
                 )
 
     def listener_callback(self, msg):
@@ -259,25 +248,25 @@ class WebRenderer(Node):
     def tool_callback(self, msg):
         try:
             import json
+
             try:
                 data = json.loads(msg.data)
                 name = data.get('name', 'unknown')
                 args = data.get('arguments', '{}')
                 # Format as a clean block name(args) with minimal spacing for stacking
-                tool_msg = f"\n```json\n{name}({args})\n```\n"
+                tool_msg = f'\n```json\n{name}({args})\n```\n'
             except (json.JSONDecodeError, TypeError, ValueError):
                 # Fallback for non-JSON
-                tool_msg = f"\n```\nTOOL: {msg.data}\n```\n"
+                tool_msg = f'\n```\nTOOL: {msg.data}\n```\n'
             with self.lock:
                 self.current_content += tool_msg
                 self._update_web_content()
         except Exception as e:
-            self.get_logger().error(f"Failed to process tool call: {e}")
+            self.get_logger().error(f'Failed to process tool call: {e}')
 
     def reasoning_callback(self, msg):
         js_code = (
-            "if(window.appendReasoning) "
-            f"window.appendReasoning({repr(msg.data)});"
+            f'if(window.appendReasoning) window.appendReasoning({repr(msg.data)});'
         )
         self.page.runJavaScript(js_code)
 
@@ -285,14 +274,14 @@ class WebRenderer(Node):
         content = self.current_content
         # Wrap in IIFE to avoid global variable redeclaration errors
         js_code = (
-            "(function() {"
-            f"  const content = {repr(content)};"
-            "  if (window.updateContent) {"
-            "    window.updateContent(content);"
-            "  } else if (window.appendStream) {"
-            "    window.appendStream(content);"
-            "  }"
-            "})();"
+            '(function() {'
+            f'  const content = {repr(content)};'
+            '  if (window.updateContent) {'
+            '    window.updateContent(content);'
+            '  } else if (window.appendStream) {'
+            '    window.appendStream(content);'
+            '  }'
+            '})();'
         )
         self.page.runJavaScript(js_code)
 
@@ -308,20 +297,18 @@ class WebRenderer(Node):
         if self.image_pub:
             # Convert QImage to numpy (BGRA)
             buf = image.bits()
-            arr = np.frombuffer(buf, dtype=np.uint8).reshape(
-                self.height, self.width, 4
-            )
+            arr = np.frombuffer(buf, dtype=np.uint8).reshape(self.height, self.width, 4)
 
             # Publish as Image message
             try:
                 # Use "bgra8" for image.Format_ARGB32
                 # (actually BGRA in memory on little-endian)
-                msg = self.bridge.cv2_to_imgmsg(arr, "bgra8")
+                msg = self.bridge.cv2_to_imgmsg(arr, 'bgra8')
                 msg.header.stamp = self.get_clock().now().to_msg()
-                msg.header.frame_id = "overlay_frame"
+                msg.header.frame_id = 'overlay_frame'
                 self.image_pub.publish(msg)
             except Exception as e:
-                self.get_logger().error(f"Failed to publish image: {e}")
+                self.get_logger().error(f'Failed to publish image: {e}')
 
         # 2. Write to FIFO if enabled
         if self.fifo_fd is not None:
@@ -332,7 +319,9 @@ class WebRenderer(Node):
                 # Efficiently strip alpha to get 3-byte (BGR) output
                 # We use the existing numpy bridge if possible, or create a view
                 buf = image.bits()
-                arr = np.frombuffer(buf, dtype=np.uint8).reshape(self.height, self.width, 4)
+                arr = np.frombuffer(buf, dtype=np.uint8).reshape(
+                    self.height, self.width, 4
+                )
                 data = arr[:, :, :3].tobytes()
 
             try:
@@ -345,14 +334,14 @@ class WebRenderer(Node):
             except OSError as e:
                 # 32=EPIPE (broken pipe), 11=EAGAIN (non-blocking would block)
                 if e.errno == 32:  # Broken pipe - reader disconnected
-                    self.get_logger().warn("Reader disconnected, waiting...")
+                    self.get_logger().warn('Reader disconnected, waiting...')
                     try:
                         os.close(self.fifo_fd)
                     except OSError:
                         pass
                     self.fifo_fd = None
                 elif e.errno != 11:  # Ignore EAGAIN, log others
-                    self.get_logger().error(f"FIFO write failed: {e}")
+                    self.get_logger().error(f'FIFO write failed: {e}')
                     try:
                         os.close(self.fifo_fd)
                     except OSError:
@@ -376,13 +365,13 @@ class WebRenderer(Node):
 
 def main(args=None):
     # Only set defaults if not already provided by environment (e.g. Docker)
-    if "QT_QPA_PLATFORM" not in os.environ:
-        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    if 'QT_QPA_PLATFORM' not in os.environ:
+        os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 
     # Chromium flags via env var
-    if "QTWEBENGINE_CHROMIUM_FLAGS" not in os.environ:
-        flags = "--disable-gpu --no-sandbox --disable-software-rasterizer"
-        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = flags
+    if 'QTWEBENGINE_CHROMIUM_FLAGS' not in os.environ:
+        flags = '--disable-gpu --no-sandbox --disable-software-rasterizer'
+        os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = flags
 
     rclpy.init(args=args)
 

@@ -13,29 +13,31 @@
 # limitations under the License.
 
 import os
+from pathlib import Path
 import signal
 import sys
 import threading
-from pathlib import Path
 
 # ROS 2 imports
+from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import PackageNotFoundError
+from rcl_interfaces.msg import ParameterDescriptor
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-from rcl_interfaces.msg import ParameterDescriptor
-from ament_index_python.packages import (
-    get_package_share_directory,
-    PackageNotFoundError
-)
 
 # Qt imports
 try:
-    from PySide6.QtWidgets import QApplication, QMainWindow
+    from PySide6.QtCore import QObject
+    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import QUrl
+    from PySide6.QtCore import Slot
     from PySide6.QtWebEngineCore import QWebEnginePage
     from PySide6.QtWebEngineWidgets import QWebEngineView
-    from PySide6.QtCore import QUrl, QTimer, Slot, QObject
+    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QMainWindow
 except ImportError as e:
-    print(f"Error: {e}. Please install PySide6 with: pip install PySide6")
+    print(f'Error: {e}. Please install PySide6 with: pip install PySide6')
     sys.exit(1)
 
 
@@ -49,9 +51,7 @@ class Bridge(QObject):
         msg = String()
         msg.data = text
         self.node.chat_pub.publish(msg)
-        self.node.get_logger().info(
-            f"Published chat message: '{text[:20]}...'"
-        )
+        self.node.get_logger().info(f"Published chat message: '{text[:20]}...'")
 
 
 class CustomPage(QWebEnginePage):
@@ -60,11 +60,11 @@ class CustomPage(QWebEnginePage):
         self.node = node
 
     def javaScriptConsoleMessage(self, level, message, line_id, source_id):
-        if message.startswith("BRIDGE_CALL:"):
-            text = message[len("BRIDGE_CALL:"):]
+        if message.startswith('BRIDGE_CALL:'):
+            text = message[len('BRIDGE_CALL:'):]
             self.node.bridge.sendMessage(text)
         else:
-            self.node.get_logger().info(f"[JS] {message} (line {line_id})")
+            self.node.get_logger().info(f'[JS] {message} (line {line_id})')
 
 
 class WebviewNode(Node):
@@ -75,32 +75,32 @@ class WebviewNode(Node):
         self.declare_parameter(
             'width',
             int(os.environ.get('WEBVIEW_WIDTH', 1024)),
-            ParameterDescriptor(description='Window width in pixels')
+            ParameterDescriptor(description='Window width in pixels'),
         )
         self.declare_parameter(
             'height',
             int(os.environ.get('WEBVIEW_HEIGHT', 768)),
-            ParameterDescriptor(description='Window height in pixels')
+            ParameterDescriptor(description='Window height in pixels'),
         )
         self.declare_parameter(
             'queue_length',
             int(os.environ.get('WEBVIEW_QUEUE_LENGTH', 1000)),
-            ParameterDescriptor(description='ROS subscription queue size')
+            ParameterDescriptor(description='ROS subscription queue size'),
         )
         self.declare_parameter(
             'enable_chat',
             os.environ.get('WEBVIEW_ENABLE_CHAT', 'false').lower() == 'true',
-            ParameterDescriptor(description='Enable interactive chat area')
+            ParameterDescriptor(description='Enable interactive chat area'),
         )
         self.declare_parameter(
             'override_css',
             os.environ.get('WEBVIEW_OVERRIDE_CSS', ''),
-            ParameterDescriptor(description='Path to a custom .css file')
+            ParameterDescriptor(description='Path to a custom .css file'),
         )
         self.declare_parameter(
             'ui_path',
             os.environ.get('WEBVIEW_UI_PATH', ''),
-            ParameterDescriptor(description='Path to a custom .html file')
+            ParameterDescriptor(description='Path to a custom .html file'),
         )
 
         self.width = self.get_parameter('width').value
@@ -117,7 +117,7 @@ class WebviewNode(Node):
 
         # Create Main Window
         self.main_window = QMainWindow()
-        self.main_window.setWindowTitle("BOB NEXUS | INTERACTIVE TERMINAL")
+        self.main_window.setWindowTitle('BOB NEXUS | INTERACTIVE TERMINAL')
         self.main_window.resize(self.width, self.height)
 
         # Create WebEngineView
@@ -136,11 +136,11 @@ class WebviewNode(Node):
         if not self.ui_path:
             try:
                 package_share_dir = get_package_share_directory('bob_av_tools')
-                html_path = Path(package_share_dir) / "webview.html"
+                html_path = Path(package_share_dir) / 'webview.html'
             except (PackageNotFoundError, Exception):
-                html_path = Path(__file__).parent / "webview.html"
+                html_path = Path(__file__).parent / 'webview.html'
                 if not html_path.exists():
-                    html_path = Path(os.getcwd()) / "bob_av_tools" / "webview.html"
+                    html_path = Path(os.getcwd()) / 'bob_av_tools' / 'webview.html'
             self.ui_path = str(html_path.absolute())
         else:
             # Respect absolute path or relative to CWD
@@ -148,24 +148,15 @@ class WebviewNode(Node):
 
         # Subscription
         self.subscription = self.create_subscription(
-            String,
-            'llm_stream',
-            self.listener_callback,
-            self.queue_length
+            String, 'llm_stream', self.listener_callback, self.queue_length
         )
 
         self.tool_sub = self.create_subscription(
-            String,
-            'llm_tool_calls',
-            self.tool_callback,
-            self.queue_length
+            String, 'llm_tool_calls', self.tool_callback, self.queue_length
         )
 
         self.reasoning_sub = self.create_subscription(
-            String,
-            'llm_reasoning',
-            self.reasoning_callback,
-            self.queue_length
+            String, 'llm_reasoning', self.reasoning_callback, self.queue_length
         )
 
         # Publisher for Chat
@@ -175,12 +166,12 @@ class WebviewNode(Node):
         url = QUrl.fromLocalFile(self.ui_path)
         query_params = []
         if self.enable_chat:
-            query_params.append("chat=true")
+            query_params.append('chat=true')
         if query_params:
-            url.setQuery("&".join(query_params))
+            url.setQuery('&'.join(query_params))
 
         self.get_logger().info(
-            f"Loading UI from: {self.ui_path} (Chat: {self.enable_chat})"
+            f'Loading UI from: {self.ui_path} (Chat: {self.enable_chat})'
         )
         self.page.load(url)
 
@@ -193,13 +184,12 @@ class WebviewNode(Node):
         if success:
             # 1. Inject Bridge
             self.page.runJavaScript(
-                "window.pythonBridge = { sendMessage: (text) => "
+                'window.pythonBridge = { sendMessage: (text) => '
                 "{ console.log('BRIDGE_CALL:' + text); } };"
             )
             # 2. Inject Custom CSS if provided
-            css_exists = (
-                self.override_css_path and
-                os.path.exists(self.override_css_path)
+            css_exists = self.override_css_path and os.path.exists(
+                self.override_css_path
             )
             if css_exists:
                 try:
@@ -207,57 +197,51 @@ class WebviewNode(Node):
                         css_content = f.read()
                     # Wrap in IIFE to avoid global variable redeclaration errors
                     js_inject = (
-                        "(function() {"
+                        '(function() {'
                         "  const style = document.createElement('style');"
-                        f"  style.textContent = {repr(css_content)}; "
+                        f'  style.textContent = {repr(css_content)}; '
                         "  document.head.insertAdjacentElement('beforeend', style);"
-                        "})();"
+                        '})();'
                     )
                     self.page.runJavaScript(js_inject)
                     self.get_logger().info(
-                        f"Injected custom CSS from: {self.override_css_path}"
+                        f'Injected custom CSS from: {self.override_css_path}'
                     )
                 except Exception as e:
-                    self.get_logger().error(f"Failed to load CSS: {e}")
+                    self.get_logger().error(f'Failed to load CSS: {e}')
             elif self.override_css_path:
                 self.get_logger().warning(
-                    f"CSS file not found: {self.override_css_path}"
+                    f'CSS file not found: {self.override_css_path}'
                 )
 
     def listener_callback(self, msg):
         # We now send data chunks. The JS side will handle the accumulation
         # into a persistent AI block.
-        js_code = (
-            "if(window.appendStream) "
-            f"window.appendStream({repr(msg.data)});"
-        )
+        js_code = f'if(window.appendStream) window.appendStream({repr(msg.data)});'
         self.page.runJavaScript(js_code)
 
     def tool_callback(self, msg):
         try:
             import json
+
             try:
                 data = json.loads(msg.data)
                 name = data.get('name', 'unknown')
                 args = data.get('arguments', '{}')
                 # Format as a clean block name(args) with minimal spacing for stacking
-                tool_msg = f"\n```json\n{name}({args})\n```\n"
+                tool_msg = f'\n```json\n{name}({args})\n```\n'
             except (json.JSONDecodeError, TypeError, ValueError):
                 # Fallback for non-JSON tool messages
-                tool_msg = f"\n```\nTOOL: {msg.data}\n```\n"
+                tool_msg = f'\n```\nTOOL: {msg.data}\n```\n'
 
-            js_code = (
-                "if(window.appendStream) "
-                f"window.appendStream({repr(tool_msg)});"
-            )
+            js_code = f'if(window.appendStream) window.appendStream({repr(tool_msg)});'
             self.page.runJavaScript(js_code)
         except Exception as e:
-            self.get_logger().error(f"Failed to process tool call: {e}")
+            self.get_logger().error(f'Failed to process tool call: {e}')
 
     def reasoning_callback(self, msg):
         js_code = (
-            "if(window.appendReasoning) "
-            f"window.appendReasoning({repr(msg.data)});"
+            f'if(window.appendReasoning) window.appendReasoning({repr(msg.data)});'
         )
         self.page.runJavaScript(js_code)
 
@@ -280,15 +264,13 @@ class WebviewNode(Node):
 
 def main(args=None):
     # Only set defaults if not already provided by environment (e.g. Docker)
-    if "QT_QPA_PLATFORM" not in os.environ:
-        os.environ["QT_QPA_PLATFORM"] = "xcb"
+    if 'QT_QPA_PLATFORM' not in os.environ:
+        os.environ['QT_QPA_PLATFORM'] = 'xcb'
 
     # Chromium flags via env var
-    if "QTWEBENGINE_CHROMIUM_FLAGS" not in os.environ:
-        flags = (
-            "--disable-gpu --no-sandbox --disable-software-rasterizer"
-        )
-        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = flags
+    if 'QTWEBENGINE_CHROMIUM_FLAGS' not in os.environ:
+        flags = '--disable-gpu --no-sandbox --disable-software-rasterizer'
+        os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = flags
 
     rclpy.init(args=args)
     renderer = WebviewNode()

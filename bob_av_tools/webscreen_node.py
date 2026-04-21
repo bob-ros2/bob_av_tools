@@ -22,38 +22,38 @@ DeferredLoad time, non-blocking FIFO auto-reconnect, and ROS Image publishing.
 import fcntl
 import json
 import os
+from pathlib import Path
 import signal
 import sys
 import threading
-from pathlib import Path
 
 import numpy as np
-
+from rcl_interfaces.msg import ParameterDescriptor
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
-from rcl_interfaces.msg import ParameterDescriptor
 
 try:
     from cv_bridge import CvBridge
+
     HAS_CV_BRIDGE = True
 except ImportError:
     HAS_CV_BRIDGE = False
 
 try:
-    from PySide6.QtWidgets import QApplication
-    from PySide6.QtWebEngineCore import (
-        QWebEnginePage,
-        QWebEngineProfile,
-        QWebEngineScript,
-    )
-    from PySide6.QtWebEngineWidgets import QWebEngineView
-    from PySide6.QtNetwork import QNetworkCookie
-    from PySide6.QtCore import QUrl, QTimer, QByteArray
+    from PySide6.QtCore import QByteArray
+    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import QUrl
     from PySide6.QtGui import QImage
+    from PySide6.QtNetwork import QNetworkCookie
+    from PySide6.QtWebEngineCore import QWebEnginePage
+    from PySide6.QtWebEngineCore import QWebEngineProfile
+    from PySide6.QtWebEngineCore import QWebEngineScript
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    from PySide6.QtWidgets import QApplication
 except ImportError as e:
-    print(f"Error: {e}. Please install PySide6 with: pip install PySide6")
+    print(f'Error: {e}. Please install PySide6 with: pip install PySide6')
     sys.exit(1)
 
 
@@ -67,7 +67,7 @@ class CustomPage(QWebEnginePage):
 
     def javaScriptConsoleMessage(self, level, message, line, source):
         """Forward browser console messages to ROS logger at DEBUG level."""
-        self.node.get_logger().debug(f"[JS] {source}:{line}: {message}")
+        self.node.get_logger().debug(f'[JS] {source}:{line}: {message}')
 
 
 class WebScreenNode(Node):
@@ -84,8 +84,8 @@ class WebScreenNode(Node):
         """Declare parameters, initialise Qt application, load the URL."""
         super().__init__('webscreen_node')
         self.get_logger().info(
-            f"Web Screen Node starting on "
-            f"ROS_DOMAIN_ID: {os.environ.get('ROS_DOMAIN_ID', '0')}"
+            f'Web Screen Node starting on '
+            f'ROS_DOMAIN_ID: {os.environ.get("ROS_DOMAIN_ID", "0")}'
         )
 
         # ── Parameters ───────────────────────────────────────────────────────
@@ -93,31 +93,63 @@ class WebScreenNode(Node):
             d = ParameterDescriptor(description=desc)
             self.declare_parameter(key, default, d)
 
-        _p('width', int(os.environ.get('WEBSCREEN_WIDTH', 1280)),
-           'Render width in pixels (Env: WEBSCREEN_WIDTH).')
-        _p('height', int(os.environ.get('WEBSCREEN_HEIGHT', 720)),
-           'Render height in pixels (Env: WEBSCREEN_HEIGHT).')
-        _p('fps', float(os.environ.get('WEBSCREEN_FPS', 30.0)),
-           'Frames per second for capture (Env: WEBSCREEN_FPS).')
-        _p('url', os.environ.get('WEBSCREEN_URL', ''),
-           'URL or local file:// path to load (Env: WEBSCREEN_URL).')
-        _p('fifo_path',
-           os.environ.get('WEBSCREEN_FIFO_PATH', '/tmp/webscreen_fifo'),
-           'FIFO path for raw BGRA output (Env: WEBSCREEN_FIFO_PATH).')
-        _p('queue_length', int(os.environ.get('WEBSCREEN_QUEUE_LENGTH', 10)),
-           'ROS publisher queue depth (Env: WEBSCREEN_QUEUE_LENGTH).')
-        _p('cookies_file', os.environ.get('WEBSCREEN_COOKIES_FILE', ''),
-           'Path to a JSON cookie file for authentication '
-           '(Env: WEBSCREEN_COOKIES_FILE).')
-        _p('pre_script', os.environ.get('WEBSCREEN_PRE_SCRIPT', ''),
-           'Path to a .js file injected at DeferredLoad time '
-           '(Env: WEBSCREEN_PRE_SCRIPT).')
-        _p('scroll_x', int(os.environ.get('WEBSCREEN_SCROLL_X', 0)),
-           'Horizontal scroll offset in pixels (Env: WEBSCREEN_SCROLL_X).')
-        _p('scroll_y', int(os.environ.get('WEBSCREEN_SCROLL_Y', 0)),
-           'Vertical scroll offset in pixels (Env: WEBSCREEN_SCROLL_Y).')
-        _p('fifo_alpha', True,
-           'Whether to include the alpha channel in the FIFO output.')
+        _p(
+            'width',
+            int(os.environ.get('WEBSCREEN_WIDTH', 1280)),
+            'Render width in pixels (Env: WEBSCREEN_WIDTH).',
+        )
+        _p(
+            'height',
+            int(os.environ.get('WEBSCREEN_HEIGHT', 720)),
+            'Render height in pixels (Env: WEBSCREEN_HEIGHT).',
+        )
+        _p(
+            'fps',
+            float(os.environ.get('WEBSCREEN_FPS', 30.0)),
+            'Frames per second for capture (Env: WEBSCREEN_FPS).',
+        )
+        _p(
+            'url',
+            os.environ.get('WEBSCREEN_URL', ''),
+            'URL or local file:// path to load (Env: WEBSCREEN_URL).',
+        )
+        _p(
+            'fifo_path',
+            os.environ.get('WEBSCREEN_FIFO_PATH', '/tmp/webscreen_fifo'),
+            'FIFO path for raw BGRA output (Env: WEBSCREEN_FIFO_PATH).',
+        )
+        _p(
+            'queue_length',
+            int(os.environ.get('WEBSCREEN_QUEUE_LENGTH', 10)),
+            'ROS publisher queue depth (Env: WEBSCREEN_QUEUE_LENGTH).',
+        )
+        _p(
+            'cookies_file',
+            os.environ.get('WEBSCREEN_COOKIES_FILE', ''),
+            'Path to a JSON cookie file for authentication '
+            '(Env: WEBSCREEN_COOKIES_FILE).',
+        )
+        _p(
+            'pre_script',
+            os.environ.get('WEBSCREEN_PRE_SCRIPT', ''),
+            'Path to a .js file injected at DeferredLoad time '
+            '(Env: WEBSCREEN_PRE_SCRIPT).',
+        )
+        _p(
+            'scroll_x',
+            int(os.environ.get('WEBSCREEN_SCROLL_X', 0)),
+            'Horizontal scroll offset in pixels (Env: WEBSCREEN_SCROLL_X).',
+        )
+        _p(
+            'scroll_y',
+            int(os.environ.get('WEBSCREEN_SCROLL_Y', 0)),
+            'Vertical scroll offset in pixels (Env: WEBSCREEN_SCROLL_Y).',
+        )
+        _p(
+            'fifo_alpha',
+            True,
+            'Whether to include the alpha channel in the FIFO output.',
+        )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
@@ -133,18 +165,22 @@ class WebScreenNode(Node):
 
         # ── ROS publisher ────────────────────────────────────────────────────
         self.publisher = self.create_publisher(
-            Image, 'webscreen_image', self.queue_length)
+            Image, 'webscreen_image', self.queue_length
+        )
         self.get_logger().info('Publishing frames to: webscreen_image')
 
         # ── LLM Subscriptions ────────────────────────────────────────────────
-        self.current_content = ""
+        self.current_content = ''
         self.lock = threading.Lock()
         self.llm_sub = self.create_subscription(
-            String, 'llm_stream', self.llm_callback, self.queue_length)
+            String, 'llm_stream', self.llm_callback, self.queue_length
+        )
         self.tool_sub = self.create_subscription(
-            String, 'llm_tool_calls', self.tool_callback, self.queue_length)
+            String, 'llm_tool_calls', self.tool_callback, self.queue_length
+        )
         self.reasoning_sub = self.create_subscription(
-            String, 'llm_reasoning', self.reasoning_callback, self.queue_length)
+            String, 'llm_reasoning', self.reasoning_callback, self.queue_length
+        )
 
         if HAS_CV_BRIDGE:
             self.bridge = CvBridge()
@@ -155,7 +191,8 @@ class WebScreenNode(Node):
             if not os.path.exists(self.fifo_path):
                 os.mkfifo(self.fifo_path)
             self.get_logger().info(
-                f"FIFO ready: {self.fifo_path} (waiting for reader...)")
+                f'FIFO ready: {self.fifo_path} (waiting for reader...)'
+            )
 
         # ── Qt application ───────────────────────────────────────────────────
         self.qt_app = QApplication.instance() or QApplication(sys.argv)
@@ -173,8 +210,8 @@ class WebScreenNode(Node):
         # ── WebEngineView ────────────────────────────────────────────────────
         self.page = CustomPage(self)
         self.page.setBackgroundColor(
-            self.qt_app.palette().color(
-                self.qt_app.palette().ColorRole.Base))
+            self.qt_app.palette().color(self.qt_app.palette().ColorRole.Base)
+        )
         self.view = QWebEngineView()
         self.view.setPage(self.page)
         self.view.resize(self.width, self.height)
@@ -182,16 +219,17 @@ class WebScreenNode(Node):
         self.page.loadFinished.connect(self._on_load_finished)
 
         if self.url:
-            self.get_logger().info(f"Loading URL: {self.url}")
+            self.get_logger().info(f'Loading URL: {self.url}')
             self.page.load(QUrl(self.url))
         else:
             self.get_logger().warn(
-                "No URL configured. Set the 'url' parameter or "
-                "WEBSCREEN_URL env var.")
+                "No URL configured. Set the 'url' parameter or WEBSCREEN_URL env var."
+            )
             self.page.setHtml(
                 '<html><body style="background:#1e1e1e;color:#ccc;'
                 'font-family:monospace;padding:2rem">'
-                '<h2>webscreen</h2><p>No URL configured.</p></body></html>')
+                '<h2>webscreen</h2><p>No URL configured.</p></body></html>'
+            )
 
         # ── Timers (must be created AFTER QApplication) ──────────────────────
         self.timer = QTimer()
@@ -219,11 +257,9 @@ class WebScreenNode(Node):
                 cookie.setSecure(c.get('secure', False))
                 cookie.setHttpOnly(c.get('httpOnly', False))
                 self.cookie_store.setCookie(cookie)
-            self.get_logger().info(
-                f"Injected {len(cookies)} cookies from {path}")
+            self.get_logger().info(f'Injected {len(cookies)} cookies from {path}')
         except Exception as e:
-            self.get_logger().error(
-                f"Failed to load cookies from {path}: {e}")
+            self.get_logger().error(f'Failed to load cookies from {path}: {e}')
 
     def _inject_pre_script(self, path):
         """Register a JS file to be injected at DeferredLoad into each page."""
@@ -237,18 +273,16 @@ class WebScreenNode(Node):
             script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
             script.setRunsOnSubFrames(False)
             self.page.scripts().insert(script)
-            self.get_logger().info(f"Pre-script registered from: {path}")
+            self.get_logger().info(f'Pre-script registered from: {path}')
         except Exception as e:
-            self.get_logger().error(
-                f"Failed to load pre_script from {path}: {e}")
+            self.get_logger().error(f'Failed to load pre_script from {path}: {e}')
 
     def _on_load_finished(self, success):
         """Log the result of a page load attempt."""
         if success:
-            self.get_logger().info(f"Page loaded: {self.url}")
+            self.get_logger().info(f'Page loaded: {self.url}')
         else:
-            self.get_logger().warn(
-                f"Page load failed or partial: {self.url}")
+            self.get_logger().warn(f'Page load failed or partial: {self.url}')
 
     def _try_reconnect_fifo(self):
         """Try to open the FIFO non-blockingly and then switch to blocking."""
@@ -259,7 +293,7 @@ class WebScreenNode(Node):
             flags = fcntl.fcntl(fd, fcntl.F_GETFL)
             fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
             self.fifo_fd = fd
-            self.get_logger().info("FIFO connected to reader.")
+            self.get_logger().info('FIFO connected to reader.')
         except OSError:
             pass
 
@@ -267,21 +301,22 @@ class WebScreenNode(Node):
         """Capture the current render, publish to ROS, and write to FIFO."""
         # grab() renders the widget into a QPixmap – the correct offscreen way
         pixmap = self.view.grab()
-        image = pixmap.toImage().convertToFormat(
-            QImage.Format.Format_ARGB32)
+        image = pixmap.toImage().convertToFormat(QImage.Format.Format_ARGB32)
 
         if HAS_CV_BRIDGE:
             try:
                 ptr = image.bits()
                 arr = np.frombuffer(ptr, dtype=np.uint8).reshape(
-                    (self.height, self.width, 4))
+                    (self.height, self.width, 4)
+                )
                 bgr = arr[:, :, :3]
                 msg = self.bridge.cv2_to_imgmsg(
-                    np.ascontiguousarray(bgr), encoding='bgr8')
+                    np.ascontiguousarray(bgr), encoding='bgr8'
+                )
                 msg.header.stamp = self.get_clock().now().to_msg()
                 self.publisher.publish(msg)
             except Exception as e:
-                self.get_logger().error(f"Failed to publish image: {e}")
+                self.get_logger().error(f'Failed to publish image: {e}')
 
         if self.fifo_fd is not None:
             if self.fifo_alpha:
@@ -291,7 +326,8 @@ class WebScreenNode(Node):
                 # Strip alpha for efficient 3-byte (BGR) output
                 ptr = image.bits()
                 arr = np.frombuffer(ptr, dtype=np.uint8).reshape(
-                    (self.height, self.width, 4))
+                    (self.height, self.width, 4)
+                )
                 data = arr[:, :, :3].tobytes()
 
             try:
@@ -303,14 +339,14 @@ class WebScreenNode(Node):
                     total += sent
             except OSError as e:
                 if e.errno == 32:  # EPIPE – reader disconnected
-                    self.get_logger().warn("Reader disconnected, waiting...")
+                    self.get_logger().warn('Reader disconnected, waiting...')
                     try:
                         os.close(self.fifo_fd)
                     except OSError:
                         pass
                     self.fifo_fd = None
                 elif e.errno != 11:  # ignore EAGAIN
-                    self.get_logger().error(f"FIFO write failed: {e}")
+                    self.get_logger().error(f'FIFO write failed: {e}')
                     try:
                         os.close(self.fifo_fd)
                     except OSError:
@@ -327,27 +363,27 @@ class WebScreenNode(Node):
         """Handle incoming tool call notifications with clean functional format."""
         try:
             import json
+
             try:
                 data = json.loads(msg.data)
                 name = data.get('name', 'unknown')
                 args = data.get('arguments', '{}')
                 # Format as a clean block name(args) with minimal spacing
-                tool_msg = f"\n```json\n{name}({args})\n```\n"
+                tool_msg = f'\n```json\n{name}({args})\n```\n'
             except (json.JSONDecodeError, TypeError, ValueError):
                 # Fallback for non-JSON
-                tool_msg = f"\n```\nTOOL: {msg.data}\n```\n"
+                tool_msg = f'\n```\nTOOL: {msg.data}\n```\n'
 
             with self.lock:
                 self.current_content += tool_msg
                 self._update_web_content()
         except Exception as e:
-            self.get_logger().error(f"Failed to process tool call: {e}")
+            self.get_logger().error(f'Failed to process tool call: {e}')
 
     def reasoning_callback(self, msg):
         """Handle incoming reasoning data."""
         js_code = (
-            "if(window.appendReasoning) "
-            f"window.appendReasoning({repr(msg.data)});"
+            f'if(window.appendReasoning) window.appendReasoning({repr(msg.data)});'
         )
         self.page.runJavaScript(js_code)
 
@@ -411,10 +447,7 @@ def main(args=None):
         os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 
     if 'QTWEBENGINE_CHROMIUM_FLAGS' not in os.environ:
-        flags = (
-            '--disable-gpu --no-sandbox '
-            '--disable-software-rasterizer'
-        )
+        flags = '--disable-gpu --no-sandbox --disable-software-rasterizer'
         os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = flags
 
     rclpy.init(args=args)
