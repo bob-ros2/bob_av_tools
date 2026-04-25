@@ -55,6 +55,7 @@ Renders a localized HTML overlay for LLM text streams. Optimized for embedding i
 | `fifo_path` | `WEBVIDEO_FIFO_PATH` | `/tmp/web_fifo` | Path to output raw pipe. |
 | `fifo_alpha`| `WEBVIDEO_FIFO_ALPHA`| `true` | If `false`, output is 3-byte BGR (Lean Mode). |
 | `queue_length`| `WEBVIDEO_QUEUE_LENGTH`| `1000` | Subscription queue size. |
+| `max_text_length`| `WEBVIDEO_MAX_TEXT_LENGTH`| `0` | Max chars to keep (0=unlimited). Prevents slowdown. |
 | `override_css`| `WEBVIDEO_OVERRIDE_CSS`| `''` | Path to a custom .css file. |
 
 
@@ -75,9 +76,10 @@ Interactive window for human-in-the-loop interaction. Opens a GUI window on the 
 |-----------|--------------------|---------|-------------|
 | `ui_path` | `WEBVIEW_UI_PATH` | `webview.html` | Path to the base HTML template. |
 | `width` | `WEBVIEW_WIDTH` | `1024` | Window width (px). |
-| `height` | `WEBVIEW_HEIGHT" | `768` | Window height (px). |
+| `height` | `WEBVIEW_HEIGHT` | `768` | Window height (px). |
 | `enable_chat` | `WEBVIEW_ENABLE_CHAT` | `false` | Enable/Disable chat input area. |
 | `queue_length`| `WEBVIEW_QUEUE_LENGTH`| `1000` | Subscription queue size. |
+| `max_text_length`| `WEBVIEW_MAX_TEXT_LENGTH`| `0` | Max chars to keep in JS buffer (0=unlimited). |
 | `override_css`| `WEBVIEW_OVERRIDE_CSS`| `''` | Path to a custom .css file. |
 
 
@@ -94,15 +96,16 @@ Renders any external URL or local file offscreen. Ideal for capturing Twitch cha
 | Parameter | Env Var Equivalent | Default | Description |
 |-----------|--------------------|---------|-------------|
 | `url` | `WEBSCREEN_URL` | `''` | **Required.** URL or `file://` path. |
-| `width` | `WEBSCREEN_WIDTH" | `1280` | Viewport width. |
-| `height` | `WEBSCREEN_HEIGHT" | `720` | Viewport height. |
-| `fps` | `WEBSCREEN_FPS" | `30.0` | Capture rate. |
+| `width` | `WEBSCREEN_WIDTH` | `1280` | Viewport width. |
+| `height` | `WEBSCREEN_HEIGHT` | `720` | Viewport height. |
+| `fps` | `WEBSCREEN_FPS` | `30.0` | Capture rate. |
 | `fifo_path` | `WEBSCREEN_FIFO_PATH`| `/tmp/webscreen_fifo` | Path to raw pipe. |
 | `fifo_alpha`| `WEBSCREEN_FIFO_ALPHA`| `true` | If `false`, output is 3-byte BGR (Lean Mode). |
+| `max_text_length`| `WEBSCREEN_MAX_TEXT_LENGTH`| `0` | Max chars for LLM overlays (0=unlimited). |
 | `cookies_file`| `WEBSCREEN_COOKIES_FILE`| `''` | Path to JSON cookies for auth. |
 | `pre_script` | `WEBSCREEN_PRE_SCRIPT` | `''` | Path to JS automation script. |
 | `scroll_x` | `WEBSCREEN_SCROLL_X` | `0` | Initial horizontal scroll. |
-| `scroll_y" | `WEBSCREEN_SCROLL_Y` | `0` | Initial vertical scroll. |
+| `scroll_y` | `WEBSCREEN_SCROLL_Y` | `0` | Initial vertical scroll. |
 
 
 ## Configuration Examples
@@ -211,6 +214,3 @@ window.appendStream = function(chunk) {
 For offline use, required libraries are located in `bob_av_tools/vendor/`:
 - `highlight.min.js`: Syntax highlighting for code blocks.
 - `atom-one-dark.min.css`: Dark theme for highlighting.
-
-## License
-Apache-2.0
