@@ -331,6 +331,7 @@
         if (urlParams.get('chat') === 'true') {
             chatContainer.style.display = 'flex';
         }
+        const maxTextLength = parseInt(urlParams.get('max_text_length')) || 0;
 
         // Auto-resize textarea
         chatInput.addEventListener('input', () => {
@@ -461,6 +462,17 @@
         window.appendStream = (chunk) => {
             if (!currentAIBlock) createAIBlock();
             currentContent += chunk;
+
+            // Optional pruning for long sessions
+            if (maxTextLength > 0 && currentContent.length > maxTextLength) {
+                currentContent = currentContent.slice(-maxTextLength);
+                // Prune old DOM elements to keep the renderer fast
+                const entries = contentArea.querySelectorAll('.ai-response-block, .uplink-echo, .reasoning-block');
+                if (entries.length > 20) {
+                    for(let i=0; i<5; i++) entries[i]?.remove();
+                }
+            }
+
             try {
                 if (window.marked) {
                     currentAIBlock.innerHTML = marked.parse(currentContent);
@@ -472,6 +484,10 @@
             } catch (e) {
                 console.error("Render Error:", e);
             }
+        };
+
+        window.createNewTurn = () => {
+            createAIBlock();
         };
 
         window.appendReasoning = (chunk) => {

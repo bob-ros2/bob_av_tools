@@ -246,123 +246,133 @@
   </div>
 
   <script>
-    // --- MARKED RENDERER CONFIG ---
-    const renderer = new marked.Renderer();
+    const contentArea = document.getElementById('content-area');
+    let currentAIBlock = null;
+    let currentContent = "";
+    let currentReasoningBlock = null;
+    let currentReasoningContent = "";
+    let isReasoningCollapsed = false;
 
-    // Helper to extract text from whatever marked sends (string or token)
+    const urlParams = new URLSearchParams(window.location.search);
+    const maxTextLength = parseInt(urlParams.get('max_text_length')) || 0;
+
+    // --- MARKED RENDERER CONFIG ---
+    const internalRenderer = new marked.Renderer();
     const getVal = (val, field) => {
       if (!val) return "";
       if (typeof val === 'string') return val;
       if (typeof val === 'object') return val[field] || val.text || val.raw || JSON.stringify(val);
       return String(val);
     };
-
-    // 1. Block-Highlighting (Safe Version)
-    renderer.code = function (a, b) {
+    internalRenderer.code = function (a, b) {
       const codeVal = getVal(a, 'text');
       const langVal = getVal(b, 'lang');
-
       let highlighted = codeVal;
       let language = null;
-
       if (window.hljs) {
         try {
           language = (langVal && hljs.getLanguage(langVal)) ? langVal : null;
-          highlighted = language
-            ? hljs.highlight(codeVal, { language }).value
-            : hljs.highlightAuto(codeVal).value;
+          highlighted = language ? hljs.highlight(codeVal, { language }).value : hljs.highlightAuto(codeVal).value;
         } catch (e) { highlighted = codeVal; }
       }
       return `<pre><code class="hljs ${language ? 'language-' + language : ''}">${highlighted}</code></pre>`;
     };
-
-    // 2. Inline-Highlighting (Safe Version)
-    renderer.codespan = function (tokenOrText) {
+    internalRenderer.codespan = function (tokenOrText) {
       const text = getVal(tokenOrText, 'text');
       let highlighted = text;
       if (window.hljs) {
-        try {
-          highlighted = hljs.highlightAuto(text).value;
-        } catch (e) { }
+        try { highlighted = hljs.highlightAuto(text).value; } catch (e) { }
       }
       return `<code class="hljs">${highlighted}</code>`;
     };
+    marked.setOptions({ renderer: internalRenderer, gfm: true, breaks: true });
 
-    marked.setOptions({
-      renderer: renderer,
-      gfm: true,
-      breaks: true
-    });
-    // ------------------------------
-
-    const contentArea = document.getElementById('content-area');
-    let currentContent = "";
-    let currentReasoning = "";
-    let isReasoningCollapsed = false;
-
-    window.toggleReasoning = () => {
-      isReasoningCollapsed = !isReasoningCollapsed;
-      renderAll();
+    const createAIBlock = () => {
+      const div = document.createElement('div');
+      div.className = 'ai-response-block';
+      contentArea.appendChild(div);
+      currentAIBlock = div;
+      currentContent = ""; 
+      currentReasoningBlock = null;
+      currentReasoningContent = "";
     };
 
-    const renderAll = () => {
-      try {
-        if (!window.marked) return;
-
-        let html = "";
-        if (currentReasoning) {
-          const collapsedClass = isReasoningCollapsed ? "collapsed" : "";
-          html += `
-            <div class="reasoning-block ${collapsedClass}">
-                <div class="reasoning-header">
-                    <span>THOUGHTS</span>
-                    <button class="collapse-btn" onclick="toggleReasoning()">
-                        ${isReasoningCollapsed ? '▼' : '▲'}
-                    </button>
-                </div>
-                <div class="reasoning-content">
-                    ${marked.parse(currentReasoning)}
-                </div>
-            </div>`;
-        }
-        if (currentContent) {
-          html += marked.parse(currentContent);
-        }
-
-        contentArea.innerHTML = html;
-        contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
-      } catch (e) {
-        console.error("Render Error:", e);
+    window.toggleReasoning = (block) => {
+      if (block) {
+        block.classList.toggle('collapsed');
+        const btn = block.querySelector('.collapse-btn');
+        if (btn) btn.innerText = block.classList.contains('collapsed') ? '▼' : '▲';
       }
     };
 
-    window.updateContent = (newContent) => {
-      currentContent = newContent;
-      renderAll();
+    window.appendStream = (chunk) => {
+      if (!currentAIBlock) createAIBlock();
+      currentContent += chunk;
+
+      // Optional pruning for long sessions
+      if (maxTextLength > 0 && currentContent.length > maxTextLength) {
+          currentContent = currentContent.slice(-maxTextLength);
+          const entries = contentArea.querySelectorAll('.ai-response-block, .reasoning-block');
+          if (entries.length > 15) {
+              for(let i=0; i<3; i++) entries[i]?.remove();
+          }
+      }
+
+      if (window.marked && currentAIBlock) {
+        currentAIBlock.innerHTML = marked.parse(currentContent);
+        contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
+      }
+    };
+
+    window.createNewTurn = () => {
+        createAIBlock();
     };
 
     window.appendReasoning = (chunk) => {
-      currentReasoning += chunk;
-      renderAll();
+        if (!currentReasoningBlock) {
+            currentReasoningBlock = document.createElement('div');
+            currentReasoningBlock.className = 'reasoning-block';
+            
+            const header = document.createElement('div');
+            header.className = 'reasoning-header';
+            header.innerHTML = `<span>THOUGHTS</span><button class="collapse-btn">▲</button>`;
+            
+            const btn = header.querySelector('.collapse-btn');
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                currentReasoningBlock.classList.toggle('collapsed');
+                btn.innerText = currentReasoningBlock.classList.contains('collapsed') ? '▼' : '▲';
+            };
+            
+            const rContent = document.createElement('div');
+            rContent.className = 'reasoning-content';
+            
+            currentReasoningBlock.appendChild(header);
+            currentReasoningBlock.appendChild(rContent);
+
+            if (currentAIBlock) {
+                contentArea.insertBefore(currentReasoningBlock, currentAIBlock);
+            } else {
+                contentArea.appendChild(currentReasoningBlock);
+            }
+            currentReasoningContent = "";
+        }
+        
+        currentReasoningContent += chunk;
+        if (window.marked) {
+            const rContent = currentReasoningBlock.querySelector('.reasoning-content');
+            rContent.innerHTML = marked.parse(currentReasoningContent);
+            contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
+        }
     };
 
-    // Reset reasoning when a new tool call or significant content update happens? 
-    // Actually typically reasoning is followed by content.
-    // If the node sends a full content update, we trust it.
-    // But we might want to clear reasoning when a new sequence starts.
-    // However, the current topic structure doesn't easily tell us when a new turn starts
-    // unless the server clears it. 
-    // For now, we'll just keep it until it's manually reset or new content comes?
-    // Usually if currentContent starts from scratch, we should clear reasoning.
-
-    const originalUpdateContent = window.updateContent;
-    window.updateContent = (newContent) => {
-      // Simple heuristic: if the new content is short and we had much more before, it's likely a reset
-      if (newContent.length < currentContent.length && newContent.length < 50) {
-        currentReasoning = "";
-      }
-      currentContent = newContent;
-      renderAll();
+    window.updateContent = (fullText) => {
+        // Compatibility: Clear everything and render as one block
+        contentArea.innerHTML = "";
+        createAIBlock();
+        currentContent = fullText;
+        currentAIBlock.innerHTML = marked.parse(currentContent);
+        contentArea.scrollTo({ top: contentArea.scrollHeight, behavior: 'instant' });
     };
 
   </script>

@@ -102,12 +102,18 @@ class WebviewNode(Node):
             os.environ.get('WEBVIEW_UI_PATH', ''),
             ParameterDescriptor(description='Path to a custom .html file'),
         )
+        self.declare_parameter(
+            'max_text_length',
+            int(os.environ.get('WEBVIEW_MAX_TEXT_LENGTH', 0)),
+            ParameterDescriptor(description='Maximum text length to keep (0 for unlimited)'),
+        )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.queue_length = self.get_parameter('queue_length').value
         self.enable_chat = self.get_parameter('enable_chat').value
         self.override_css_path = self.get_parameter('override_css').value
+        self.max_text_length = self.get_parameter('max_text_length').value
 
         # Shared state
         self.lock = threading.Lock()
@@ -169,6 +175,13 @@ class WebviewNode(Node):
             query_params.append('chat=true')
         if query_params:
             url.setQuery('&'.join(query_params))
+
+        if self.max_text_length > 0:
+            query = url.query()
+            if query:
+                url.setQuery(query + f'&max_text_length={self.max_text_length}')
+            else:
+                url.setQuery(f'max_text_length={self.max_text_length}')
 
         self.get_logger().info(
             f'Loading UI from: {self.ui_path} (Chat: {self.enable_chat})'

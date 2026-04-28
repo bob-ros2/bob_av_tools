@@ -113,6 +113,11 @@ class WebRenderer(Node):
                 description='Whether to include the alpha channel in the FIFO output'
             ),
         )
+        self.declare_parameter(
+            'max_text_length',
+            int(os.environ.get('WEBVIDEO_MAX_TEXT_LENGTH', 0)),
+            ParameterDescriptor(description='Maximum text length to keep (0 for unlimited)'),
+        )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
@@ -121,6 +126,7 @@ class WebRenderer(Node):
         self.queue_length = self.get_parameter('queue_length').value
         self.override_css_path = self.get_parameter('override_css').value
         self.fifo_alpha = self.get_parameter('fifo_alpha').value
+        self.max_text_length = self.get_parameter('max_text_length').value
 
         # ROS Publishers & Subscriptions
         # Fixed topic name 'web_image', can be remapped
@@ -143,6 +149,11 @@ class WebRenderer(Node):
         self.reasoning_sub = self.create_subscription(
             String, 'llm_reasoning', self.reasoning_callback, self.queue_length
         )
+
+        self.turn_sub = self.create_subscription(
+            String, 'llm_query', self.turn_callback, self.queue_length
+        )
+        self.get_logger().info("Turn trigger subscribed to: 'llm_query'")
 
         # FIFO Setup (non-blocking, auto-reconnect)
         self.fifo_fd = None
@@ -243,24 +254,38 @@ class WebRenderer(Node):
     def listener_callback(self, msg):
         with self.lock:
             self.current_content += msg.data
-            self._update_web_content()
+            self._prune_content()
+            # Send chunks for block-based rendering
+            js_code = f'if(window.appendStream) window.appendStream({repr(msg.data)});'
+            self.page.runJavaScript(js_code)
+
+    def _prune_content(self):
+        """Truncate content from the beginning if it exceeds max_text_length."""
+        if self.max_text_length > 0 and len(self.current_content) > self.max_text_length:
+            # Find the best place to cut: the first newline after the excess length
+            excess = len(self.current_content) - self.max_text_length
+            next_newline = self.current_content.find('\n', excess)
+            if next_newline != -1 and next_newline < excess + 500:
+                self.current_content = self.current_content[next_newline + 1:]
+            else:
+                self.current_content = self.current_content[excess:]
 
     def tool_callback(self, msg):
         try:
             import json
-
             try:
                 data = json.loads(msg.data)
                 name = data.get('name', 'unknown')
                 args = data.get('arguments', '{}')
-                # Format as a clean block name(args) with minimal spacing for stacking
                 tool_msg = f'\n```json\n{name}({args})\n```\n'
             except (json.JSONDecodeError, TypeError, ValueError):
-                # Fallback for non-JSON
                 tool_msg = f'\n```\nTOOL: {msg.data}\n```\n'
+
             with self.lock:
                 self.current_content += tool_msg
-                self._update_web_content()
+                self._prune_content()
+                js_code = f'if(window.appendStream) window.appendStream({repr(tool_msg)});'
+                self.page.runJavaScript(js_code)
         except Exception as e:
             self.get_logger().error(f'Failed to process tool call: {e}')
 
@@ -268,6 +293,17 @@ class WebRenderer(Node):
         js_code = (
             f'if(window.appendReasoning) window.appendReasoning({repr(msg.data)});'
         )
+        self.page.runJavaScript(js_code)
+
+    def turn_callback(self, msg):
+        """Handle incoming turn trigger via llm_query topic."""
+        with self.lock:
+            # Clear current content in Python to start fresh
+            self.current_content = ''
+            self.get_logger().info("New turn triggered via 'llm_query'")
+
+        # Tell JS to start a new turn
+        js_code = 'if(window.createNewTurn) window.createNewTurn();'
         self.page.runJavaScript(js_code)
 
     def _update_web_content(self):

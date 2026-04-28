@@ -150,6 +150,11 @@ class WebScreenNode(Node):
             True,
             'Whether to include the alpha channel in the FIFO output.',
         )
+        _p(
+            'max_text_length',
+            int(os.environ.get('WEBSCREEN_MAX_TEXT_LENGTH', 0)),
+            'Maximum text length to keep (0 for unlimited).',
+        )
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
@@ -162,6 +167,7 @@ class WebScreenNode(Node):
         self.scroll_x = self.get_parameter('scroll_x').value
         self.scroll_y = self.get_parameter('scroll_y').value
         self.fifo_alpha = self.get_parameter('fifo_alpha').value
+        self.max_text_length = self.get_parameter('max_text_length').value
 
         # ── ROS publisher ────────────────────────────────────────────────────
         self.publisher = self.create_publisher(
@@ -357,7 +363,18 @@ class WebScreenNode(Node):
         """Handle incoming LLM stream data."""
         with self.lock:
             self.current_content += msg.data
+            self._prune_content()
             self._update_web_content()
+
+    def _prune_content(self):
+        """Truncate content from the beginning if it exceeds max_text_length."""
+        if self.max_text_length > 0 and len(self.current_content) > self.max_text_length:
+            excess = len(self.current_content) - self.max_text_length
+            next_newline = self.current_content.find('\n', excess)
+            if next_newline != -1 and next_newline < excess + 500:
+                self.current_content = self.current_content[next_newline + 1:]
+            else:
+                self.current_content = self.current_content[excess:]
 
     def tool_callback(self, msg):
         """Handle incoming tool call notifications with clean functional format."""
@@ -376,6 +393,7 @@ class WebScreenNode(Node):
 
             with self.lock:
                 self.current_content += tool_msg
+                self._prune_content()
                 self._update_web_content()
         except Exception as e:
             self.get_logger().error(f'Failed to process tool call: {e}')
